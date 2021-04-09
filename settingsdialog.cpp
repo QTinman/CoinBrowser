@@ -5,7 +5,7 @@
 #include <QMessageBox>
 #include <QtCore>
 #include <QDate>
-#include </usr/local/include/QtSpell-qt5/QtSpell.hpp>
+//#include </usr/local/include/QtSpell-qt5/QtSpell.hpp>
 #include "string.h"
 #include <QKeyEvent>
 #include <QUrl>
@@ -156,7 +156,15 @@ void settingsDialog::on_exchanges_activated(int index)
 
 void settingsDialog::on_pushButton_clicked()
 {
-    QMessageBox::about(this,"Donate","If you find this program useful please donate to.\nPaypal to jonssofh@hotmail.com\nBTC 1HJ5xJmePkfrYwixbZJaMUcXosiJhYRLbo\nDOT 12XHN5kYhSfCUdwiEAKMkW87L2kKV2AjerLMQukHJ4CnmKbL\nXRP rGzJmHraBUCWpncm3DGdscmAsuy3rDin4R\nADA addr1q9h424fgyqw3y0zer34myqn9lyr303nxcyvzttk8nyqmr7r0242jsgqazg79j8rtkgpxt7g8zlrxdsgcykhv0xgpk8uqh49hnw\nVET 0x136349A99A5a56617e7E7AdbE8c55a0712B0068F\nSupport is most appreciated.");
+    QMessageBox msgBox;
+    QClipboard *clipboard;
+    msgBox.setWindowTitle("Donate!");
+    msgBox.setText("If you find this program useful please donate to.\nPaypal to jonssofh@hotmail.com\nBTC 1HJ5xJmePkfrYwixbZJaMUcXosiJhYRLbo\nDOT 12XHN5kYhSfCUdwiEAKMkW87L2kKV2AjerLMQukHJ4CnmKbL\nXRP rGzJmHraBUCWpncm3DGdscmAsuy3rDin4R\nADA addr1q9h424fgyqw3y0zer34myqn9lyr303nxcyvzttk8nyqmr7r0242jsgqazg79j8rtkgpxt7g8zlrxdsgcykhv0xgpk8uqh49hnw\nVET 0x136349A99A5a56617e7E7AdbE8c55a0712B0068F\nSupport is most appreciated.");
+    QAbstractButton* pButtonYes = msgBox.addButton(tr("Copy to clipboard"), QMessageBox::YesRole);
+    msgBox.exec();
+    if (msgBox.clickedButton()==pButtonYes) {
+        clipboard->setText("Paypal to jonssofh@hotmail.com\nBTC 1HJ5xJmePkfrYwixbZJaMUcXosiJhYRLbo\nDOT 12XHN5kYhSfCUdwiEAKMkW87L2kKV2AjerLMQukHJ4CnmKbL\nXRP rGzJmHraBUCWpncm3DGdscmAsuy3rDin4R\nADA addr1q9h424fgyqw3y0zer34myqn9lyr303nxcyvzttk8nyqmr7r0242jsgqazg79j8rtkgpxt7g8zlrxdsgcykhv0xgpk8uqh49hnw\nVET 0x136349A99A5a56617e7E7AdbE8c55a0712B0068F");
+    }
 }
 
 void settingsDialog::on_profilelist_activated(int index)
