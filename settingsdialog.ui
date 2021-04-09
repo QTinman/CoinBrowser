@@ -19,23 +19,23 @@
   </property>
   <layout class="QGridLayout" name="gridLayout">
    <item row="0" column="0">
+    <widget class="QLabel" name="message">
+     <property name="text">
+      <string>TextLabel</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="1">
     <widget class="QPushButton" name="pushButton">
      <property name="text">
       <string>Donate!</string>
      </property>
     </widget>
    </item>
-   <item row="0" column="2" rowspan="2">
-    <widget class="QDialogButtonBox" name="buttonBox">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-     <property name="standardButtons">
-      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="0" colspan="2">
+   <item row="1" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout_6">
      <item>
       <widget class="QLabel" name="label_5">
@@ -52,7 +52,17 @@
      </item>
     </layout>
    </item>
-   <item row="2" column="0" colspan="2">
+   <item row="1" column="1" rowspan="2">
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
       <widget class="QLabel" name="jsonpath">
@@ -73,7 +83,7 @@
      </item>
     </layout>
    </item>
-   <item row="3" column="0" colspan="2">
+   <item row="3" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout_4">
      <item>
       <widget class="QLabel" name="label_2">
@@ -94,7 +104,7 @@
      </item>
     </layout>
    </item>
-   <item row="4" column="0" colspan="2">
+   <item row="4" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout_2">
      <item>
       <widget class="QLabel" name="label">
@@ -115,7 +125,7 @@
      </item>
     </layout>
    </item>
-   <item row="5" column="0" colspan="2">
+   <item row="5" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout_3">
      <item>
       <widget class="QLabel" name="label_3">
@@ -136,67 +146,61 @@
      </item>
     </layout>
    </item>
-   <item row="6" column="0">
-    <layout class="QVBoxLayout" name="verticalLayout_2">
+   <item row="6" column="0" colspan="2">
+    <layout class="QHBoxLayout" name="horizontalLayout_7">
      <item>
-      <widget class="QLabel" name="label_4">
-       <property name="text">
-        <string>Blacklist</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QComboBox" name="exchanges"/>
-     </item>
-     <item>
-      <widget class="QTextEdit" name="blacklist"/>
-     </item>
-    </layout>
-   </item>
-   <item row="6" column="1" colspan="2">
-    <layout class="QVBoxLayout" name="verticalLayout">
-     <item>
-      <widget class="QLabel" name="label_6">
-       <property name="text">
-        <string>Stake coin</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QComboBox" name="maincoins"/>
-     </item>
-     <item>
-      <widget class="QTextEdit" name="maincoinslist"/>
-     </item>
-     <item>
-      <layout class="QHBoxLayout" name="horizontalLayout_5">
+      <layout class="QVBoxLayout" name="verticalLayout_2">
        <item>
-        <widget class="QLabel" name="stake_coin">
+        <widget class="QLabel" name="label_4">
          <property name="text">
-          <string>BTC</string>
+          <string>Blacklist</string>
          </property>
         </widget>
        </item>
        <item>
-        <widget class="QSpinBox" name="stake_coin_price">
-         <property name="maximum">
-          <number>10000000</number>
+        <widget class="QComboBox" name="exchanges"/>
+       </item>
+       <item>
+        <widget class="QTextEdit" name="blacklist"/>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QVBoxLayout" name="verticalLayout">
+       <item>
+        <widget class="QLabel" name="label_6">
+         <property name="text">
+          <string>Stake coin</string>
          </property>
         </widget>
+       </item>
+       <item>
+        <widget class="QComboBox" name="maincoins"/>
+       </item>
+       <item>
+        <widget class="QTextEdit" name="maincoinslist"/>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_5">
+         <item>
+          <widget class="QLabel" name="stake_coin">
+           <property name="text">
+            <string>BTC</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QSpinBox" name="stake_coin_price">
+           <property name="maximum">
+            <number>10000000</number>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </item>
       </layout>
      </item>
     </layout>
-   </item>
-   <item row="7" column="1">
-    <widget class="QLabel" name="message">
-     <property name="text">
-      <string>TextLabel</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignCenter</set>
-     </property>
-    </widget>
    </item>
   </layout>
  </widget>
