@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>393</width>
+    <width>431</width>
     <height>257</height>
    </rect>
   </property>
@@ -243,7 +243,11 @@
     </widget>
    </item>
    <item row="6" column="4">
-    <widget class="QDoubleSpinBox" name="volum_min"/>
+    <widget class="QDoubleSpinBox" name="volum_min">
+     <property name="maximum">
+      <double>1000000000.000000000000000</double>
+     </property>
+    </widget>
    </item>
   </layout>
  </widget>

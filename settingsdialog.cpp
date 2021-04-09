@@ -11,7 +11,7 @@
 #include <QUrl>
 #include <QtWidgets>
 
-
+QString profill;
 settingsDialog::settingsDialog(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::settingsDialog)
@@ -19,11 +19,19 @@ settingsDialog::settingsDialog(QWidget *parent) :
     ui->setupUi(this);
     //MainWindow main;
     int index=0;
-    QStringList blacklist,cryptolist;
+    QStringList blacklist,cryptolist,profilelist;
     QStringList exchanges={"Binance","Bittrex"}, maincoins={"BTC","ETH","USTD"};
     ui->exchanges->clear();
     ui->exchanges->addItems(exchanges);
 
+    QSettings appsettings("QTinman",appgroup);
+    appsettings.beginGroup("General");
+    profill = appsettings.value("profile").toString();
+    profilelist = appsettings.value("profilelist").toStringList();
+    ui->profilelist->addItems(profilelist);
+    ui->profilelist->setCurrentText(profill);
+    appsettings.endGroup();
+    ui->profile->setText(profill);
     ui->maincoins->clear();
     cryptolist = loadsettings("cryptolist").toStringList();
     if (cryptolist.isEmpty()) cryptolist = maincoins;
@@ -56,12 +64,23 @@ settingsDialog::settingsDialog(QWidget *parent) :
 settingsDialog::~settingsDialog()
 {
 
-
+    //profill = ui->profile->text();
     //qDebug() << ui->blacklist->toPlainText();
+    QStringList profilelist;
+    for (int i=0; i<ui->profilelist->count();i++) {
+        ui->profilelist->setCurrentIndex(i);
+        profilelist.append(ui->profilelist->currentText());
+    }
+    if (!profilelist.contains(ui->profile->text())) profilelist.append(ui->profile->text());
+    QSettings appsettings("QTinman",appgroup);
+    appsettings.beginGroup("General");
+    appsettings.setValue("profile",QVariant::fromValue(ui->profile->text()));
+    appsettings.setValue("profilelist", QVariant::fromValue(profilelist));
+    appsettings.endGroup();
     QString ex=ui->exchanges->currentText();
     QStringList blacklist=ui->blacklist->toPlainText().split("\n"),cryptolist=ui->maincoinslist->toPlainText().split("\n");
-    QSettings appsettings("QTinman",appgroup);
-    appsettings.beginGroup(appgroup);
+
+    appsettings.beginGroup(profill);
     appsettings.setValue("cryptolist", QVariant::fromValue(cryptolist));
     if (ui->exchanges->currentText()=="Binance") appsettings.setValue("binance_blacklist", QVariant::fromValue(blacklist));
     if (ui->exchanges->currentText()=="Bittrex") appsettings.setValue("bittrex_blacklist", QVariant::fromValue(blacklist));
@@ -85,7 +104,7 @@ QVariant settingsDialog::loadsettings(QString settings)
 {
     QVariant returnvar;
     QSettings appsettings("QTinman",appgroup);
-    appsettings.beginGroup(appgroup);
+    appsettings.beginGroup(profill);
     returnvar = appsettings.value(settings);
     appsettings.endGroup();
     return returnvar;
@@ -94,7 +113,7 @@ QVariant settingsDialog::loadsettings(QString settings)
 void settingsDialog::savesettings(QString settings, QVariant attr)
 {
     QSettings appsettings("QTinman",appgroup);
-    appsettings.beginGroup(appgroup);
+    appsettings.beginGroup(profill);
     appsettings.setValue(settings,QVariant::fromValue(attr));
     appsettings.endGroup();
 }
@@ -138,4 +157,9 @@ void settingsDialog::on_exchanges_activated(int index)
 void settingsDialog::on_pushButton_clicked()
 {
     QMessageBox::about(this,"Donate","If you find this program useful please donate to.\nPaypal to jonssofh@hotmail.com\nBTC 1HJ5xJmePkfrYwixbZJaMUcXosiJhYRLbo\nADA addr1q9h424fgyqw3y0zer34myqn9lyr303nxcyvzttk8nyqmr7r0242jsgqazg79j8rtkgpxt7g8zlrxdsgcykhv0xgpk8uqh49hnw\nVET 0x136349A99A5a56617e7E7AdbE8c55a0712B0068F\nSupport is most appreciated.");
+}
+
+void settingsDialog::on_profilelist_activated(int index)
+{
+    ui->profile->setText(ui->profilelist->currentText());
 }

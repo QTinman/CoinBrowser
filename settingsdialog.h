@@ -32,6 +32,8 @@ private slots:
 
     void savesettings(QString settings, QVariant attr);
 
+    void on_profilelist_activated(int index);
+
 private:
     Ui::settingsDialog *ui;
 };

@@ -12,7 +12,7 @@ QString crypt="BTC";
 QString exchange,dbfile="coinhistory.db",dbtable="coins";
 QSqlDatabase db;
 int colums=8,maxcoins=0;
-QString appgroup="coinbrowser";
+QString appgroup="coinbrowser",profile;
 double from1h=-2,to1h=5,from24h=0,to24h=100,from7d=-2,to7d=100,btc_price=58338,markedcap_percent,volume_percent,price_change_from,price_change_to,volum_min;
 bool change_1h,change_24h,change_7d,volume,marked_cap,use_volume,show_only_blacklisted,change_price,create_db=false;
 
@@ -45,8 +45,15 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
 {
-    int row=0,i=0;
     ui->setupUi(this);
+    QSettings appsettings("QTinman",appgroup);
+    appsettings.beginGroup("General");
+    profile = appsettings.value("profile").toString();
+    if (profile == "") {
+        profile = appgroup;
+        appsettings.setValue("profile",QVariant::fromValue(profile));
+    }
+    appsettings.endGroup();
     setGeometry(loadsettings("position").toRect());
     change_1h = loadsettings("change_1h").toBool();
     change_24h = loadsettings("change_24h").toBool();
@@ -69,6 +76,7 @@ MainWindow::MainWindow(QWidget *parent)
     volume_percent = loadsettings("volume_percent").toDouble();
     volum_min  = loadsettings("volum_min").toDouble();
     crypt = loadsettings("crypt").toString();
+    dbfile=crypt+"_coinhistory.db";
     btc_price = loadsettings("stake_coin_price").toDouble();
     db = QSqlDatabase::addDatabase("QSQLITE"); //db start config
     qDebug() << "db just configured";
@@ -83,7 +91,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->comboBox->clear();
     ui->comboBox->addItems(exchanges);
     ui->messages->setText("");
-    this->setWindowTitle(tr("Cryptocurrency tool for Freqtrade"));
+    this->setWindowTitle("Cryptocurrency tool for Freqtrade, active stake coin "+crypt);
     exchange = ui->comboBox->currentText();
     QStringList modellist = initializemodel();
     //QModelIndex index;
@@ -144,7 +152,7 @@ QVariant MainWindow::loadsettings(QString settings)
 {
     QVariant returnvar;
     QSettings appsettings("QTinman",appgroup);
-    appsettings.beginGroup(appgroup);
+    appsettings.beginGroup(profile);
     returnvar = appsettings.value(settings);
     appsettings.endGroup();
     return returnvar;
@@ -153,7 +161,7 @@ QVariant MainWindow::loadsettings(QString settings)
 void MainWindow::savesettings(QString settings, QVariant attr)
 {
     QSettings appsettings("QTinman",appgroup);
-    appsettings.beginGroup(appgroup);
+    appsettings.beginGroup(profile);
     appsettings.setValue(settings,QVariant::fromValue(attr));
     appsettings.endGroup();
 }
@@ -194,8 +202,8 @@ QStringList MainWindow::readpairs()
 
     //QStringList data {"AKRO","FOR","DATA","GO","HIVE"};
     //QStringList data {"DMT","AKRO","SPND","META","RDD","NPXS","MARO","SC","GLM","VLX","BORA","NKN","BTT","STPT","ORBS","GLEEC","MCO","DNT","PART","EXP","CVT","FLETA","GEO","KLAY","NLG","IOST","CND","PINK","CTXC","SHR","AKN","TUBE","VEE","BNT","REPv2","CELO","ELAMA","XST","IOC","CKB","KAI","FTC","REVV","APM","PI","OST","GBYTE","RCN","REV","SENSO","REN","OXT","MEME","BLOCK","NLC2","CURE","SKM","IOTX","GNO","FSN","DUSK","CPC","PHNX","ABBC","ADK","ROOM","JOB","LRC","OK","XTP","DCT","BTE","MORE","MER","SPHR","XEL","ONG","MDT","MYST","SUTER","STPT","BAL","VBK","WICC","HEDG","NGC","ENG","ABYSS","GTO","HDAC","ELF","ION","UMA","APIX","USDS","YOU","DAWN","EDG","GO","HMQ","UKG","RVC","LBA","BFT","LUCY","EXCL","HDAO","POT","AGRS","ART","GNC","AEON","SPC","THC","SIB","NKN","CHR","VRC","MTC","ECOC","IRIS","BOA","INSTAR","XSR","WINGS","DEP","CNTM","CTC","FOR","IHT","FCT2","GRIN","PXL","BWX","INX","BWF","ZEC","SUKU","VDX","HXRO","GXC","STC","LOON","TSHP","USDN","TSLA","PTOY","BLTV","URAC","DNA","SMBSWAP","FME","WBTC","SLS","KRT","ADT","BRZ","COSM","PROM","BTU","UPT","PLA","YFL"};
-    QSettings appsettings("QTinman","coinbrowser");
-    appsettings.beginGroup(appgroup);
+    QSettings appsettings("QTinman",appgroup);
+    appsettings.beginGroup(profile);
     //appsettings.setValue("bittrex_blacklist", QVariant::fromValue(data));
     QStringList blacklist_binance = appsettings.value("binance_blacklist").value<QStringList>();
     QStringList blacklist_bittrex = appsettings.value("bittrex_blacklist").value<QStringList>();
@@ -289,6 +297,8 @@ QStringList MainWindow::initializemodel()
         csv_file.setFileName(reportPath+"/"+csv_filename);
         csv_file.open(QIODevice::WriteOnly | QIODevice::Text);
         QTextStream outStream(&csv_file);
+        QString stake=crypt;
+        if (stake.contains("USD")) stake="USD";
         outStream << csv_string+"\n";
 
         if (ui->maxcoins->text() == "") ui->maxcoins->setText(QString::number(maxcoins));
@@ -303,7 +313,7 @@ QStringList MainWindow::initializemodel()
                  symbol = data["symbol"].toString();
                 QString name = data["name"].toString();
                 QJsonObject quote = value["quote"].toObject();
-                QJsonObject coin = quote[crypt].toObject();
+                QJsonObject coin = quote[stake].toObject();
                 double price = coin["price"].toDouble();
                 double volume_24h = coin["volume_24h"].toDouble();
                 double percent_change_1h = coin["percent_change_1h"].toDouble();
@@ -354,13 +364,19 @@ QStringList MainWindow::initializemodel()
 
 
 
-                double startprice = ((100/btc_price)/db_price);
-                startprice = btc_price*db_price;
+                //double startprice = ((100/btc_price)/db_price);
+                double startprice = btc_price*db_price;
                 double endprice = btc_price*price;
                 price_change = endprice-startprice;
                 price_change = price_change/startprice*100;
+                price_change = 100/db_price*btc_price*(price-db_price);
+                price_change = 100/startprice;
+                price_change = price_change*(endprice-startprice);
+                if (price_change < -100 || price_change > 100) price_change=0;
+                //qDebug() << db_price << " " << price;
 
                 if ((json_date > db_date || (json_date == db_date && json_h >= db_h+10)) && symbol == "ETH") ui->messages->setText("DB is over 10h old! From " +QString::number(db_date)+"/"+QString::number(db_mo)+", time "+QString::number(db_h)+":"+QString::number(db_min));
+                ui->messages->setText("Database is from "+QString::number(db_date)+"/"+QString::number(db_mo)+", time "+QString::number(db_h,'G',2)+":"+QString::number(db_min));
                 if (ui->updatedb->isChecked())
                 {
                     QSqlQuery update_qry(db);
@@ -448,7 +464,7 @@ QStringList MainWindow::initializemodel()
                 hourplus = false;
                 dayplus = false;
                 priceplus = false;
-                create_db = false;
+
                 unique = 0;
                 marked_cap_ok = false;
                 coincounts++;
@@ -457,7 +473,7 @@ QStringList MainWindow::initializemodel()
 
         }
         csv_file.close();
-
+        create_db = false;
         ui->updatedb->setChecked(false);
         ui->messages->setText(ui->messages->text()+", Found and added to list "+QString::number(coininlist));
         return modeldatalist;
