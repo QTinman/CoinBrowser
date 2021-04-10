@@ -32,7 +32,7 @@ QJsonArray MainWindow::ReadJson(const QString &path)
 
         QJsonObject jsonObject = cryptolist.object();
         jsonArray = jsonObject["data"].toArray();
-        if ((ui->maxcoins->text() == "" && maxcoins == 0) || maxcoins > jsonArray.count()) ui->maxcoins->setText(QString::number(jsonArray.count()));
+        if ((ui->maxcoins->text() == "" || maxcoins == 0) || maxcoins > jsonArray.count()) ui->maxcoins->setText(QString::number(jsonArray.count()));
         //qDebug() << "Number of cryptocurrencies " << jsonArray.count();
 
     }
@@ -199,7 +199,7 @@ QStringList MainWindow::readpairs()
 {
     QFile filein;
     QString content,outstring;
-    QStringList pairs,contentlist,blacklist={"USD","EUR","USDC","BUSD","GBP","BNB","TUSD","UST"};
+    QStringList pairs,contentlist,blacklist={"SUSD","USD","EUR","USDC","BUSD","GBP","BNB","TUSD","UST"};
     QSettings appsettings("QTinman",appgroup);
      appsettings.beginGroup(profile);
     QStringList blacklist_binance = appsettings.value("binance_blacklist").value<QStringList>();
@@ -216,7 +216,7 @@ QStringList MainWindow::readpairs()
     //QStringList blacklist_bittrex={"BORA","ARDR","NKN","BTT","STPT","ORBS","IRIS","BOA","INSTAR","XSR","WINGS","DEP","CNTM","CTC","FOR","IHT","GRIN","PXL","BWX","INX","BWF","ZEC","SUKU","VDX","HXRO","GXC","STC","LOON","TSHP","USDN","TSLA","PTOY","BLTV","URAC","DNA","SMBSWAP","FME","WBTC","SLS","KRT","ADT","BRZ","COSM","PROM","BTU","UPT","PLA","YFL"};
     //QStringList blacklist_binance={"AKRO","FOR","DATA","GO","HIVE"};
     //qDebug() << cryptolistread+"/"+crypt.toLower()+"_raw_"+exchange.toLower()+".txt";
-
+    QString rawfilepath=cryptolistread+"/"+crypt.toLower()+"_raw_"+exchange.toLower()+".txt";
     filein.setFileName(cryptolistread+"/"+crypt.toLower()+"_raw_"+exchange.toLower()+".txt");
     if (filein.open(QIODevice::ReadOnly))
     {
@@ -294,7 +294,7 @@ QStringList MainWindow::initializemodel()
         if (ui->updatedb->isChecked()) {
             create_db=true;
             ui->updatedb->setChecked(false);
-            sqlquery = "DROP TABLE coins;";
+            sqlquery = "DROP TABLE "+dbtable+";";
             QSqlQuery insert_qry(db);
             if (!insert_qry.exec(sqlquery)) ui->label->setText("Error "+insert_qry.lastError().text());
             createdb();

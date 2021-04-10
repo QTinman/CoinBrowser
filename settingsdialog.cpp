@@ -20,7 +20,7 @@ settingsDialog::settingsDialog(QWidget *parent) :
     //MainWindow main;
     int index=0;
     QStringList blacklist,cryptolist,profilelist;
-    QStringList exchanges={"Binance","Bittrex"}, maincoins={"BTC","ETH","USTD"};
+    QStringList exchanges={"Binance","Bittrex"}, maincoins={"BTC","ETH","USDT"};
     ui->exchanges->clear();
     ui->exchanges->addItems(exchanges);
 
