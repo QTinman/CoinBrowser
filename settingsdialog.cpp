@@ -50,6 +50,8 @@ settingsDialog::settingsDialog(QWidget *parent) :
     }
 
     //ui->blacklist->setText(blacklist);
+    bool report=loadsettings("report").toBool();
+    ui->reports->setChecked(report);
     QString json_path = loadsettings("json_path").toString();
     ui->jsonpathstring->setText(json_path);
     QString cryptolistwrite = loadsettings("cryptolistwrite").toString();
@@ -95,6 +97,7 @@ settingsDialog::~settingsDialog()
     savesettings("reportpath",ui->reportPath->text());
     savesettings("crypt",ui->maincoins->currentText());
     savesettings("stake_coin_price",ui->stake_coin_price->value());
+    savesettings("report",ui->reports->isChecked());
 
     delete ui;
 }

@@ -210,12 +210,6 @@ QStringList MainWindow::readpairs()
     int s=10,counter=0,added=0;
     QString cryptolistread = loadsettings("cryptolistread").toString();
 
-    //QString binance_blacklist = loadsettings("binance_blacklist").toString();
-    //QStringList bblack = binance_blacklist.();
-    //QStringList blacklist_bittrex={"DMT","AKRO","SPND","META","RDD","NPXS","MARO","SC","GLM","VLX","BORA","NKN","BTT","STPT","ORBS","GLEEC","MCO","DNT","PART","EXP","CVT","FLETA","GEO","KLAY","NLG","IOST","CND","PINK","CTXC","SHR","AKN","TUBE","VEE","BNT","REPv2","CELO","ELAMA","XST","IOC","CKB","KAI","FTC","REVV","APM","PI","OST","GBYTE","RCN","REV","SENSO","REN","OXT","MEME","BLOCK","NLC2","CURE","SKM","IOTX","GNO","FSN","DUSK","CPC","PHNX","ABBC","ADK","ROOM","JOB","LRC","OK","XTP","DCT","BTE","MORE","MER","SPHR","XEL","ONG","MDT","MYST","SUTER","STPT","BAL","VBK","WICC","HEDG","NGC","ENG","ABYSS","GTO","HDAC","ELF","ION","UMA","APIX","USDS","YOU","DAWN","EDG","GO","HMQ","UKG","RVC","LBA","BFT","LUCY","EXCL","HDAO","POT","AGRS","ART","GNC","AEON","SPC","THC","SIB","NKN","CHR","VRC","MTC","ECOC","IRIS","BOA","INSTAR","XSR","WINGS","DEP","CNTM","CTC","FOR","IHT","FCT2","GRIN","PXL","BWX","INX","BWF","ZEC","SUKU","VDX","HXRO","GXC","STC","LOON","TSHP","USDN","TSLA","PTOY","BLTV","URAC","DNA","SMBSWAP","FME","WBTC","SLS","KRT","ADT","BRZ","COSM","PROM","BTU","UPT","PLA","YFL"};
-    //QStringList blacklist_bittrex={"BORA","ARDR","NKN","BTT","STPT","ORBS","IRIS","BOA","INSTAR","XSR","WINGS","DEP","CNTM","CTC","FOR","IHT","GRIN","PXL","BWX","INX","BWF","ZEC","SUKU","VDX","HXRO","GXC","STC","LOON","TSHP","USDN","TSLA","PTOY","BLTV","URAC","DNA","SMBSWAP","FME","WBTC","SLS","KRT","ADT","BRZ","COSM","PROM","BTU","UPT","PLA","YFL"};
-    //QStringList blacklist_binance={"AKRO","FOR","DATA","GO","HIVE"};
-    //qDebug() << cryptolistread+"/"+crypt.toLower()+"_raw_"+exchange.toLower()+".txt";
     QString rawfilepath=cryptolistread+"/"+crypt.toLower()+"_raw_"+exchange.toLower()+".txt";
     filein.setFileName(cryptolistread+"/"+crypt.toLower()+"_raw_"+exchange.toLower()+".txt");
     if (filein.open(QIODevice::ReadOnly))
@@ -260,7 +254,9 @@ QStringList MainWindow::readpairs()
        ui->messages->setText("Pairs found for " + exchange + " " + QString::number(added));
        //qDebug() << "Coins Added " << added;
 
-    } else qDebug() << "Error " << filein.errorString();
+    } else {
+        qDebug() << "Error " << filein.errorString();
+    }
 
     return pairs;
 }
@@ -276,21 +272,22 @@ QStringList MainWindow::initializemodel()
         QDate cd = QDate::currentDate();
         QTime ct = QTime::currentTime();
         QSqlRecord record;
-        QString db_symbol,db_name, symbol,db_last_updated;
+        QFile csv_file;
+        QString db_symbol,db_name, symbol,db_last_updated,sqlquery="";
         double db_volume_24h,db_percent_change_1h,db_market_cap,db_price;
         int json_year,json_mo,json_date,json_h,json_min, db_year,db_mo,db_date,db_h,db_min;
         //ui->messages->setText("Please wait.....");
+        bool report=loadsettings("report").toBool();
         QString csv_string="Name,Volume new,Volume old,1h change,1h change old,Last updated, Old last updated";
-        QString csv_filename="report_"+exchange+"_"+cd.toString()+"_"+ct.toString()+".csv";
-        QFile csv_file;
-
-        QStringList pairs=readpairs(),modeldatalist;
-        QString reportPath = loadsettings("reportpath").toString(),sqlquery="";
-        csv_file.setFileName(reportPath+"/"+csv_filename);
-        csv_file.open(QIODevice::WriteOnly | QIODevice::Text);
+        if (report) {
+            QString csv_filename="report_"+exchange+"_"+cd.toString()+"_"+ct.toString()+".csv";
+            QString reportPath = loadsettings("reportpath").toString();
+            csv_file.setFileName(reportPath+"/"+csv_filename);
+            csv_file.open(QIODevice::WriteOnly | QIODevice::Text);
+        }
         QTextStream outStream(&csv_file);
-        outStream << csv_string+"\n";
-
+        if (report) outStream << csv_string+"\n";
+        QStringList pairs=readpairs(),modeldatalist;
         if (ui->updatedb->isChecked()) {
             create_db=true;
             ui->updatedb->setChecked(false);
@@ -381,7 +378,7 @@ QStringList MainWindow::initializemodel()
 
                 if ((json_date > db_date || (json_date == db_date && json_h >= db_h+10)) && symbol == "ETH") ui->messages->setText("DB is over 10h old! From " +QString::number(db_date)+"/"+QString::number(db_mo)+", time "+QString::number(db_h)+":"+QString::number(db_min));
                 ui->messages->setText("Database is from "+QString::number(db_date)+"/"+QString::number(db_mo)+", time "+QString::number(db_h,'G',2)+":"+QString::number(db_min));
-                if (ui->updatedb->isChecked() && 4==5)
+                /*if (ui->updatedb->isChecked() && 4==5)
                 {
                     QSqlQuery update_qry(db);
 
@@ -401,7 +398,7 @@ QStringList MainWindow::initializemodel()
                     update_qry.bindValue(":last_updated",last_updated);
                     update_qry.exec();
 
-                }
+                }*/
 
 
                if (!db.open())
@@ -457,9 +454,10 @@ QStringList MainWindow::initializemodel()
                     if ((weekplus && dayplus && hourplus && volumeok && i==symbol && inrank && marked_cap_ok && unique<2 && priceplus) || (!ui->filter->isChecked() && i==symbol && unique<2)) {
 
                         modeldatalist << QString::number(id) << symbol << name << QString::number(price_change) << QString::number(volume_24h) << QString::number(percent_change_1h) << QString::number(percent_change_24h) << QString::number(percent_change_7d) << last_updated_time;
-                        csv_string=name+","+QString::number(volume_24h)+","+QString::number(db_volume_24h)+","+QString::number(percent_change_1h)+","+QString::number(db_percent_change_1h)+","+last_updated+","+db_last_updated+","+cd.toString()+","+ct.toString();
-
-                        outStream << csv_string+"\n";
+                        if (report) {
+                            csv_string=name+","+QString::number(volume_24h)+","+QString::number(db_volume_24h)+","+QString::number(percent_change_1h)+","+QString::number(db_percent_change_1h)+","+last_updated+","+db_last_updated+","+cd.toString()+","+ct.toString();
+                            outStream << csv_string+"\n";
+                        }
                         coininlist++;
 
                     }
