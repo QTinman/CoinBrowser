@@ -9,9 +9,9 @@
 
 
 QString crypt="BTC";
-QString exchange,dbfile="coinhistory.db",dbtable="coins";
+QString exchange,dbfile="coinhistory.db",dbtable=crypt+"_coins";
 QSqlDatabase db;
-int colums=8,maxcoins=0;
+int colums=9,maxcoins=0;
 QString appgroup="coinbrowser",profile;
 double from1h=-2,to1h=5,from24h=0,to24h=100,from7d=-2,to7d=100,btc_price=58338,markedcap_percent,volume_percent,price_change_from,price_change_to,volum_min;
 bool change_1h,change_24h,change_7d,volume,marked_cap,use_volume,show_only_blacklisted,change_price,create_db=false;
@@ -33,7 +33,7 @@ QJsonArray MainWindow::ReadJson(const QString &path)
         QJsonObject jsonObject = cryptolist.object();
         jsonArray = jsonObject["data"].toArray();
         if ((ui->maxcoins->text() == "" && maxcoins == 0) || maxcoins > jsonArray.count()) ui->maxcoins->setText(QString::number(jsonArray.count()));
-        qDebug() << "Number of cryptocurrencies " << jsonArray.count();
+        //qDebug() << "Number of cryptocurrencies " << jsonArray.count();
 
     }
     return jsonArray;
@@ -76,10 +76,11 @@ MainWindow::MainWindow(QWidget *parent)
     volume_percent = loadsettings("volume_percent").toDouble();
     volum_min  = loadsettings("volum_min").toDouble();
     crypt = loadsettings("crypt").toString();
-    dbfile=crypt+"_coinhistory.db";
+    dbfile="coinhistory.db";
+    dbtable=crypt+"_coins";
     btc_price = loadsettings("stake_coin_price").toDouble();
     db = QSqlDatabase::addDatabase("QSQLITE"); //db start config
-    qDebug() << "db just configured";
+    //qDebug() << "db just configured";
     db.setDatabaseName(dbfile);
     if (!db.open()) {
          qDebug() << db.lastError();
@@ -98,17 +99,18 @@ MainWindow::MainWindow(QWidget *parent)
     model = new QStandardItemModel(modellist.length()/colums,colums,this);
 
     connect(ui->search,SIGNAL(textEdited(const QString &)),this,SLOT(searchmodel(const QString&)));
-    qDebug() << "initial reload model";
+    //qDebug() << "initial reload model";
     reload_model();
 
     model->setHeaderData(0, Qt::Horizontal, "Id", Qt::DisplayRole);
     model->setHeaderData(1, Qt::Horizontal, "Symbol", Qt::DisplayRole);
     model->setHeaderData(2, Qt::Horizontal, "Name", Qt::DisplayRole);
-    model->setHeaderData(3, Qt::Horizontal, "+/- dollars", Qt::DisplayRole);
+    model->setHeaderData(3, Qt::Horizontal, "100$ +/-", Qt::DisplayRole);
     model->setHeaderData(4, Qt::Horizontal, "Volume", Qt::DisplayRole);
     model->setHeaderData(5, Qt::Horizontal, "1h change", Qt::DisplayRole);
     model->setHeaderData(6, Qt::Horizontal, "24h change", Qt::DisplayRole);
     model->setHeaderData(7, Qt::Horizontal, "7d change", Qt::DisplayRole);
+    model->setHeaderData(8, Qt::Horizontal, "db/json time", Qt::DisplayRole);
     connect(ui->comboBox, QOverload<int>::of(&QComboBox::currentIndexChanged),
             [=](int index){ combo_refresh(index); });
     ui->tableView->setModel(model);
@@ -195,32 +197,26 @@ void MainWindow::createdb()
 QStringList MainWindow::readpairs()
 {
     QFile filein;
-    QString content,outstring,par1,par2;
-    QStringList pairs;
-    QStringList contentlist,blacklist={"USD","EUR","USDC","BUSD","GBP","BNB","TUSD","UST"};
-
-
-    //QStringList data {"AKRO","FOR","DATA","GO","HIVE"};
-    //QStringList data {"DMT","AKRO","SPND","META","RDD","NPXS","MARO","SC","GLM","VLX","BORA","NKN","BTT","STPT","ORBS","GLEEC","MCO","DNT","PART","EXP","CVT","FLETA","GEO","KLAY","NLG","IOST","CND","PINK","CTXC","SHR","AKN","TUBE","VEE","BNT","REPv2","CELO","ELAMA","XST","IOC","CKB","KAI","FTC","REVV","APM","PI","OST","GBYTE","RCN","REV","SENSO","REN","OXT","MEME","BLOCK","NLC2","CURE","SKM","IOTX","GNO","FSN","DUSK","CPC","PHNX","ABBC","ADK","ROOM","JOB","LRC","OK","XTP","DCT","BTE","MORE","MER","SPHR","XEL","ONG","MDT","MYST","SUTER","STPT","BAL","VBK","WICC","HEDG","NGC","ENG","ABYSS","GTO","HDAC","ELF","ION","UMA","APIX","USDS","YOU","DAWN","EDG","GO","HMQ","UKG","RVC","LBA","BFT","LUCY","EXCL","HDAO","POT","AGRS","ART","GNC","AEON","SPC","THC","SIB","NKN","CHR","VRC","MTC","ECOC","IRIS","BOA","INSTAR","XSR","WINGS","DEP","CNTM","CTC","FOR","IHT","FCT2","GRIN","PXL","BWX","INX","BWF","ZEC","SUKU","VDX","HXRO","GXC","STC","LOON","TSHP","USDN","TSLA","PTOY","BLTV","URAC","DNA","SMBSWAP","FME","WBTC","SLS","KRT","ADT","BRZ","COSM","PROM","BTU","UPT","PLA","YFL"};
+    QString content,outstring;
+    QStringList pairs,contentlist,blacklist={"USD","EUR","USDC","BUSD","GBP","BNB","TUSD","UST"};
     QSettings appsettings("QTinman",appgroup);
-    appsettings.beginGroup(profile);
-    //appsettings.setValue("bittrex_blacklist", QVariant::fromValue(data));
+     appsettings.beginGroup(profile);
     QStringList blacklist_binance = appsettings.value("binance_blacklist").value<QStringList>();
     QStringList blacklist_bittrex = appsettings.value("bittrex_blacklist").value<QStringList>();
-    appsettings.endGroup();
+     appsettings.endGroup();
+    QStringList bittrex_blacklist = loadsettings("bittrex_blacklist").toStringList();
+    bool blackl=false,inrank=false;
+    int s=10,counter=0,added=0;
+    QString cryptolistread = loadsettings("cryptolistread").toString();
 
     //QString binance_blacklist = loadsettings("binance_blacklist").toString();
     //QStringList bblack = binance_blacklist.();
-    QStringList bittrex_blacklist = loadsettings("bittrex_blacklist").toStringList();
     //QStringList blacklist_bittrex={"DMT","AKRO","SPND","META","RDD","NPXS","MARO","SC","GLM","VLX","BORA","NKN","BTT","STPT","ORBS","GLEEC","MCO","DNT","PART","EXP","CVT","FLETA","GEO","KLAY","NLG","IOST","CND","PINK","CTXC","SHR","AKN","TUBE","VEE","BNT","REPv2","CELO","ELAMA","XST","IOC","CKB","KAI","FTC","REVV","APM","PI","OST","GBYTE","RCN","REV","SENSO","REN","OXT","MEME","BLOCK","NLC2","CURE","SKM","IOTX","GNO","FSN","DUSK","CPC","PHNX","ABBC","ADK","ROOM","JOB","LRC","OK","XTP","DCT","BTE","MORE","MER","SPHR","XEL","ONG","MDT","MYST","SUTER","STPT","BAL","VBK","WICC","HEDG","NGC","ENG","ABYSS","GTO","HDAC","ELF","ION","UMA","APIX","USDS","YOU","DAWN","EDG","GO","HMQ","UKG","RVC","LBA","BFT","LUCY","EXCL","HDAO","POT","AGRS","ART","GNC","AEON","SPC","THC","SIB","NKN","CHR","VRC","MTC","ECOC","IRIS","BOA","INSTAR","XSR","WINGS","DEP","CNTM","CTC","FOR","IHT","FCT2","GRIN","PXL","BWX","INX","BWF","ZEC","SUKU","VDX","HXRO","GXC","STC","LOON","TSHP","USDN","TSLA","PTOY","BLTV","URAC","DNA","SMBSWAP","FME","WBTC","SLS","KRT","ADT","BRZ","COSM","PROM","BTU","UPT","PLA","YFL"};
     //QStringList blacklist_bittrex={"BORA","ARDR","NKN","BTT","STPT","ORBS","IRIS","BOA","INSTAR","XSR","WINGS","DEP","CNTM","CTC","FOR","IHT","GRIN","PXL","BWX","INX","BWF","ZEC","SUKU","VDX","HXRO","GXC","STC","LOON","TSHP","USDN","TSLA","PTOY","BLTV","URAC","DNA","SMBSWAP","FME","WBTC","SLS","KRT","ADT","BRZ","COSM","PROM","BTU","UPT","PLA","YFL"};
     //QStringList blacklist_binance={"AKRO","FOR","DATA","GO","HIVE"};
-    bool blackl=false,inrank=false;
-    int s=10,end,start,middle,counter=0,added=0;
-    QString cryptolistread = loadsettings("cryptolistread").toString();
     //qDebug() << cryptolistread+"/"+crypt.toLower()+"_raw_"+exchange.toLower()+".txt";
-    filein.setFileName(cryptolistread+"/"+crypt.toLower()+"_raw_"+exchange.toLower()+".txt");
 
+    filein.setFileName(cryptolistread+"/"+crypt.toLower()+"_raw_"+exchange.toLower()+".txt");
     if (filein.open(QIODevice::ReadOnly))
     {
        QTextStream in(&filein);
@@ -229,11 +225,11 @@ QStringList MainWindow::readpairs()
        {
           content = in.readLine();
 
-          middle = content.indexOf("/",s);
-          start = content.lastIndexOf(" ",middle);
-          end = content.indexOf(" ",middle);
-          par1 = content.mid(start+1,middle-start-1);
-          par2 = content.mid(middle+1,end-middle-1);
+          int middle = content.indexOf("/",s);
+          int start = content.lastIndexOf(" ",middle);
+          int end = content.indexOf(" ",middle);
+          QString par1 = content.mid(start+1,middle-start-1);
+          QString par2 = content.mid(middle+1,end-middle-1);
           for ( const auto& i : blacklist  )
             if (i == par1) blackl = true;
 
@@ -261,7 +257,7 @@ QStringList MainWindow::readpairs()
        }
        filein.close();
        ui->messages->setText("Pairs found for " + exchange + " " + QString::number(added));
-       qDebug() << "Coins Added " << added;
+       //qDebug() << "Coins Added " << added;
 
     }
 
@@ -273,37 +269,43 @@ QStringList MainWindow::initializemodel()
 {
         bool weekplus=false,dayplus=false,hourplus=false,volumeok=false,inrank=false,marked_cap_ok=false,priceplus=false;
 
-        QString path = loadsettings("json_path").toString(),sqlquery="";
-        //path = "/home/john/freqtrade/crypto.json";
-        if (path =="") path="/home/john/freqtrade/crypto_"+crypt+".json";
-        QJsonArray jsonArray = ReadJson(path+"/crypto_"+crypt+".json");
+
         double percent,price_change;
         int db_id,coincounts=0,coininlist=0,unique=0;
         QDate cd = QDate::currentDate();
         QTime ct = QTime::currentTime();
+        QSqlRecord record;
+        QString db_symbol,db_name, symbol,db_last_updated;
+        double db_volume_24h,db_percent_change_1h,db_market_cap,db_price;
+        int json_year,json_mo,json_date,json_h,json_min, db_year,db_mo,db_date,db_h,db_min;
+        //ui->messages->setText("Please wait.....");
         QString csv_string="Name,Volume new,Volume old,1h change,1h change old,Last updated, Old last updated";
         QString csv_filename="report_"+exchange+"_"+cd.toString()+"_"+ct.toString()+".csv";
         QFile csv_file;
 
-        QString db_symbol,db_name, symbol;
-        double db_volume_24h,db_percent_change_1h,db_market_cap,db_price;
-        QString db_last_updated;
-        QSqlRecord record;
-
-        int json_year,json_mo,json_date,json_h,json_min, db_year,db_mo,db_date,db_h,db_min;
-        //ui->messages->setText("Please wait.....");
         QStringList pairs=readpairs(),modeldatalist;
-        QString reportPath = loadsettings("reportpath").toString();
+        QString reportPath = loadsettings("reportpath").toString(),sqlquery="";
         csv_file.setFileName(reportPath+"/"+csv_filename);
         csv_file.open(QIODevice::WriteOnly | QIODevice::Text);
         QTextStream outStream(&csv_file);
-        QString stake=crypt;
-        if (stake.contains("USD")) stake="USD";
         outStream << csv_string+"\n";
 
+        if (ui->updatedb->isChecked()) {
+            create_db=true;
+            ui->updatedb->setChecked(false);
+            sqlquery = "DROP TABLE coins;";
+            QSqlQuery insert_qry(db);
+            if (!insert_qry.exec(sqlquery)) ui->label->setText("Error "+insert_qry.lastError().text());
+            createdb();
+        }
+
+        QString stake=crypt;
+        if (stake.contains("USD")) stake="USD";
         if (ui->maxcoins->text() == "") ui->maxcoins->setText(QString::number(maxcoins));
         else maxcoins = ui->maxcoins->text().toInt();
-        //qDebug() << ui->maxcoins->text().toInt();
+        QString path = loadsettings("json_path").toString();
+        if (path =="") path="./crypto_"+crypt+".json";
+        QJsonArray jsonArray = ReadJson(path+"/crypto_"+crypt+".json");
 
         foreach (const QJsonValue & value, jsonArray) {
 
@@ -323,6 +325,7 @@ QStringList MainWindow::initializemodel()
                 double percent_change_60d = coin["percent_change_60d"].toDouble();
                 double percent_change_90d = coin["percent_change_90d"].toDouble();
                 QString last_updated = coin["last_updated"].toString();
+
                 double market_cap = coin["market_cap"].toDouble();
                 if (!db.open()) qDebug() << "Error " << db.lastError().text();
                 QSqlQuery qry(db);
@@ -345,7 +348,7 @@ QStringList MainWindow::initializemodel()
 
                   }
                 }
-
+                QString last_updated_time = db_last_updated.mid(11,5)+"/"+last_updated.mid(11,5);
                 json_year = last_updated.mid(0,4).toInt();
                 json_mo = last_updated.mid(5,2).toInt();
                 json_date = last_updated.mid(8,2).toInt();
@@ -377,11 +380,11 @@ QStringList MainWindow::initializemodel()
 
                 if ((json_date > db_date || (json_date == db_date && json_h >= db_h+10)) && symbol == "ETH") ui->messages->setText("DB is over 10h old! From " +QString::number(db_date)+"/"+QString::number(db_mo)+", time "+QString::number(db_h)+":"+QString::number(db_min));
                 ui->messages->setText("Database is from "+QString::number(db_date)+"/"+QString::number(db_mo)+", time "+QString::number(db_h,'G',2)+":"+QString::number(db_min));
-                if (ui->updatedb->isChecked())
+                if (ui->updatedb->isChecked() && 4==5)
                 {
                     QSqlQuery update_qry(db);
 
-                    sqlquery = "UPDATE coins SET id=:id, symbol=:symbol, name=:name, price=:price, volume_24h=:volume_24h, percent_change_1h=:percent_change_1h,"
+                    sqlquery = "UPDATE "+dbtable+" SET id=:id, symbol=:symbol, name=:name, price=:price, volume_24h=:volume_24h, percent_change_1h=:percent_change_1h,"
                     " percent_change_24h=:percent_change_24h, percent_change_7d=:percent_change_7d, market_cap=:market_cap, last_updated=:last_updated WHERE name=:name;";
                     if (!update_qry.prepare(sqlquery))
                       qDebug() << "prepare failed " << update_qry.lastError();
@@ -409,6 +412,7 @@ QStringList MainWindow::initializemodel()
                 insert_qry.finish();*/
 
                 if (create_db) {
+
                     QSqlQuery insert_qry(db);
                     sqlquery = "INSERT INTO "+dbtable+" (id,symbol,name,price,volume_24h,percent_change_1h,percent_change_24h,percent_change_7d,market_cap,last_updated) VALUES ("+QString::number(id)+", '"+symbol+"', '"+name+"', "+QString::number(price)+", "+QString::number(volume_24h)+", "+QString::number(percent_change_1h)+", "+QString::number(percent_change_24h)+", "+QString::number(percent_change_7d)+", "+QString::number(market_cap)+", '"+last_updated+"');";
                     //qDebug() << sqlquery;
@@ -451,7 +455,7 @@ QStringList MainWindow::initializemodel()
                 {
                     if ((weekplus && dayplus && hourplus && volumeok && i==symbol && inrank && marked_cap_ok && unique<2 && priceplus) || (!ui->filter->isChecked() && i==symbol && unique<2)) {
 
-                        modeldatalist << QString::number(id) << symbol << name << QString::number(price_change) << QString::number(volume_24h) << QString::number(percent_change_1h) << QString::number(percent_change_24h) << QString::number(percent_change_7d);
+                        modeldatalist << QString::number(id) << symbol << name << QString::number(price_change) << QString::number(volume_24h) << QString::number(percent_change_1h) << QString::number(percent_change_24h) << QString::number(percent_change_7d) << last_updated_time;
                         csv_string=name+","+QString::number(volume_24h)+","+QString::number(db_volume_24h)+","+QString::number(percent_change_1h)+","+QString::number(db_percent_change_1h)+","+last_updated+","+db_last_updated+","+cd.toString()+","+ct.toString();
 
                         outStream << csv_string+"\n";
@@ -474,7 +478,7 @@ QStringList MainWindow::initializemodel()
         }
         csv_file.close();
         create_db = false;
-        ui->updatedb->setChecked(false);
+
         ui->messages->setText(ui->messages->text()+", Found and added to list "+QString::number(coininlist));
         return modeldatalist;
 }
@@ -484,7 +488,7 @@ QStringList MainWindow::initializemodel()
 void MainWindow::combo_refresh(int comboindex)
 {
     exchange = ui->comboBox->currentText();
-    qDebug() << "ComboRefresh";
+    //qDebug() << "ComboRefresh";
     reload_model();
 }
 
@@ -497,8 +501,9 @@ void MainWindow::on_pushButton_clicked()
     QModelIndex index=model->index(row,col,QModelIndex());
     //QString cryptolistread = loadsettings("cryptolistread").toString();
     QString cryptolistwrite = loadsettings("cryptolistwrite").toString();
-    if (cryptolistwrite == "") cryptolistwrite="/home/john/freqtrade/cryptolist";
-    fileout.setFileName(cryptolistwrite+"/"+crypt.toLower()+"_"+exchange.toLower()+".txt");
+    if (cryptolistwrite == "") cryptolistwrite="./";
+    else cryptolistwrite = cryptolistwrite+"/";
+    fileout.setFileName(cryptolistwrite+crypt.toLower()+"_"+exchange.toLower()+".txt");
 
     if (!fileout.open(QIODevice::WriteOnly | QIODevice::Text))
         qDebug() << "Error opening file!";
@@ -513,14 +518,14 @@ void MainWindow::on_pushButton_clicked()
         row++;
         index=model->index(row,0,QModelIndex());
     }
-    ui->messages->setText("Pairs written to file -> "+cryptolistwrite+"/"+crypt.toLower()+"_"+exchange.toLower()+".txt");
+    ui->messages->setText("Pairs written to file -> "+cryptolistwrite+crypt.toLower()+"_"+exchange.toLower()+".txt");
     fileout.close();
 }
 
 void MainWindow::on_filter_clicked()
 {
         exchange = ui->comboBox->currentText();
-        qDebug() << "Filter reload model";
+        //qDebug() << "Filter reload model";
         reload_model();
 
 }
@@ -551,41 +556,15 @@ void MainWindow::reload_model()
     model->setRowCount(modellist.length()/colums);
     //qDebug() << "reload_model";
     while (i < modellist.length()-1) {
-       /* for (col=0;col<colums;col++) {
+       for (col=0;col<colums;col++) {
          index=model->index(row,col,QModelIndex());
-         qDebug() << col << " " << i << " " << row << " " << index;
-         if (i == 0) model->setData(index,modellist[i].toInt());
-         if (i < 3 & i > 0) model->setData(index,modellist[i]);
-         if (i < 8 & i > 2) model->setData(index,modellist[i].toDouble());
+         if (col == 0) model->setData(index,modellist[i].toInt());
+         if (col < 3 & col > 0) model->setData(index,modellist[i]);
+         if (col < 8 & col > 2) model->setData(index,modellist[i].toDouble());
+         if (col == 8) model->setData(index,modellist[i]);
          i++;
         }
-         row++;*/
-
-        index=model->index(row,0,QModelIndex());
-        model->setData(index,modellist[i].toInt());
-        i++;
-        index=model->index(row,1,QModelIndex());
-        model->setData(index,modellist[i]);
-        i++;
-         index=model->index(row,2,QModelIndex());
-         model->setData(index,modellist[i]);
-         i++;
-         index=model->index(row,3,QModelIndex());
-         model->setData(index,modellist[i].toDouble());
-         i++;
-         index=model->index(row,4,QModelIndex());
-         model->setData(index,modellist[i].toDouble());
-         i++;
-         index=model->index(row,5,QModelIndex());
-         model->setData(index,modellist[i].toDouble());
-         i++;
-         index=model->index(row,6,QModelIndex());
-         model->setData(index,modellist[i].toDouble());
-         i++;
-         index=model->index(row,7,QModelIndex());
-         model->setData(index,modellist[i].toDouble());
-         i++;
-         row++;
+      row++;
     }
 }
 

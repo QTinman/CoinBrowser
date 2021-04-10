@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>431</width>
+    <width>378</width>
     <height>257</height>
    </rect>
   </property>
@@ -18,7 +18,7 @@
     <normaloff>:/new/icon/c_black.png</normaloff>:/new/icon/c_black.png</iconset>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="0" column="0" colspan="3">
+   <item row="0" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout_4">
      <item>
       <widget class="QCheckBox" name="change_1h">
@@ -56,7 +56,7 @@
      </item>
     </layout>
    </item>
-   <item row="0" column="3" rowspan="2" colspan="2">
+   <item row="0" column="1" rowspan="2">
     <widget class="QDialogButtonBox" name="buttonBox">
      <property name="orientation">
       <enum>Qt::Vertical</enum>
@@ -66,7 +66,7 @@
      </property>
     </widget>
    </item>
-   <item row="1" column="0" colspan="3">
+   <item row="1" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout_3">
      <item>
       <widget class="QCheckBox" name="change_24h">
@@ -104,7 +104,7 @@
      </item>
     </layout>
    </item>
-   <item row="2" column="0" colspan="3">
+   <item row="2" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout_2">
      <item>
       <widget class="QCheckBox" name="change_7d">
@@ -145,7 +145,7 @@
      </item>
     </layout>
    </item>
-   <item row="3" column="0" colspan="5">
+   <item row="3" column="0" colspan="2">
     <layout class="QHBoxLayout" name="horizontalLayout_5">
      <item>
       <widget class="QCheckBox" name="pricechange">
@@ -165,9 +165,9 @@
       </widget>
      </item>
      <item>
-      <widget class="QLabel" name="label_5">
+      <widget class="QLabel" name="label_7">
        <property name="text">
-        <string>of 100dollars</string>
+        <string>-&gt;</string>
        </property>
       </widget>
      </item>
@@ -181,9 +181,16 @@
        </property>
       </widget>
      </item>
+     <item>
+      <widget class="QLabel" name="label_5">
+       <property name="text">
+        <string>of 100$</string>
+       </property>
+      </widget>
+     </item>
     </layout>
    </item>
-   <item row="4" column="0" colspan="2">
+   <item row="4" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
       <widget class="QCheckBox" name="use_last_volume">
@@ -208,46 +215,50 @@
      </item>
     </layout>
    </item>
-   <item row="5" column="0" colspan="3">
+   <item row="5" column="0">
     <widget class="QCheckBox" name="volume_greater">
      <property name="text">
       <string>Last volume to be less than new volume</string>
      </property>
     </widget>
    </item>
-   <item row="6" column="0">
-    <widget class="QCheckBox" name="show_only_blacklisted">
-     <property name="text">
-      <string>Show blacklisted pairs</string>
-     </property>
-    </widget>
-   </item>
-   <item row="6" column="1">
-    <spacer name="horizontalSpacer">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>105</width>
-       <height>20</height>
-      </size>
-     </property>
-    </spacer>
-   </item>
-   <item row="6" column="2" colspan="2">
-    <widget class="QLabel" name="label_6">
-     <property name="text">
-      <string>Volum min</string>
-     </property>
-    </widget>
-   </item>
-   <item row="6" column="4">
-    <widget class="QDoubleSpinBox" name="volum_min">
-     <property name="maximum">
-      <double>1000000000.000000000000000</double>
-     </property>
-    </widget>
+   <item row="6" column="0" colspan="2">
+    <layout class="QHBoxLayout" name="horizontalLayout_6">
+     <item>
+      <widget class="QCheckBox" name="show_only_blacklisted">
+       <property name="text">
+        <string>Show blacklisted pairs</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>105</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QLabel" name="label_6">
+       <property name="text">
+        <string>Volum min</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QDoubleSpinBox" name="volum_min">
+       <property name="maximum">
+        <double>1000000000.000000000000000</double>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </item>
   </layout>
  </widget>
