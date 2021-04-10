@@ -5,6 +5,7 @@ Data for this program is from CoinMarkedCap API. API key is needed for downloadi
 The program creates coinhistory.db database if it is missing and uses the data from exiting json file.
 The database can be updated by checking UpdateDB and will it then upgrade from existing json file.
 Typically it is good to have the database few hours older than the json file as the DB should be few hours older for some calculations.
+The settings are little quirky and the program might need to be restarted after setting stake coin.
 
 cUrl is needed for using json download scripts.
 
