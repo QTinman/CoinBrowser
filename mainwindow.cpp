@@ -187,6 +187,7 @@ void MainWindow::createdb()
           "percent_change_7d real, "
           "market_cap real, "
           "last_updated varchar(25))";
+    qDebug() << "Creating database, please wait...";
     if (!db.open()) qDebug() << "Error " << db.lastError().text();
     QSqlQuery qry(db);
     if (!qry.exec(createTables)) ui->label->setText("Error "+qry.lastError().text());
@@ -259,7 +260,7 @@ QStringList MainWindow::readpairs()
        ui->messages->setText("Pairs found for " + exchange + " " + QString::number(added));
        //qDebug() << "Coins Added " << added;
 
-    }
+    } else qDebug() << "Error " << filein.errorString();
 
     return pairs;
 }
