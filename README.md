@@ -10,3 +10,8 @@ The settings are little quirky and the program might need to be restarted after 
 cUrl is needed for using json download scripts.
 
 ![Welcome screen](https://github.com/QTinman/CoinBrowser/blob/main/screencap.png)
+
+
+About files
+The txt files with _raw_ in the name is created with command "freqtrade list-pairs -c config_ETH_Bittrex.json | grep ETH" and copied to file with this format.
+the get_ files are command scripts to dl jason files.
