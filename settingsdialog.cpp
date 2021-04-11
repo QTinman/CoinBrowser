@@ -65,22 +65,33 @@ settingsDialog::settingsDialog(QWidget *parent) :
 }
 settingsDialog::~settingsDialog()
 {
-
-    //profill = ui->profile->text();
-    //qDebug() << ui->blacklist->toPlainText();
-    QStringList profilelist;
+    QStringList profilelist,blacklist=ui->blacklist->toPlainText().split("\n"),cryptolist=ui->maincoinslist->toPlainText().split("\n");
     for (int i=0; i<ui->profilelist->count();i++) {
         ui->profilelist->setCurrentIndex(i);
         profilelist.append(ui->profilelist->currentText());
     }
-    if (!profilelist.contains(ui->profile->text())) profilelist.append(ui->profile->text());
+    if (!profilelist.contains(ui->profile->text())) {
+
+        profilelist.append(ui->profile->text());
+        QSettings appsettings("QTinman",appgroup);
+        appsettings.beginGroup(ui->profile->text());
+        appsettings.setValue("json_path",QVariant::fromValue(ui->jsonpathstring->text()));
+        appsettings.setValue("cryptolistread",QVariant::fromValue(ui->cryptolistread->text()));
+        appsettings.setValue("cryptolistwrite",QVariant::fromValue(ui->cryptolistwrite->text()));
+        appsettings.setValue("reportpath",QVariant::fromValue(ui->reportPath->text()));
+        appsettings.setValue("crypt",QVariant::fromValue(ui->maincoins->currentText()));
+        appsettings.setValue("stake_coin_price",QVariant::fromValue(ui->stake_coin_price->value()));
+        appsettings.setValue("report",QVariant::fromValue(ui->reports->isChecked()));
+        appsettings.setValue("cryptolist", QVariant::fromValue(cryptolist));
+        appsettings.endGroup();
+    }
     QSettings appsettings("QTinman",appgroup);
     appsettings.beginGroup("General");
     appsettings.setValue("profile",QVariant::fromValue(ui->profile->text()));
     appsettings.setValue("profilelist", QVariant::fromValue(profilelist));
     appsettings.endGroup();
     QString ex=ui->exchanges->currentText();
-    QStringList blacklist=ui->blacklist->toPlainText().split("\n"),cryptolist=ui->maincoinslist->toPlainText().split("\n");
+
 
     appsettings.beginGroup(profill);
     appsettings.setValue("cryptolist", QVariant::fromValue(cryptolist));
@@ -147,7 +158,7 @@ void settingsDialog::on_toolReportPath_clicked()
     ui->reportPath->setText(reportpath);
 }
 
-void settingsDialog::on_exchanges_activated(int index)
+void settingsDialog::on_exchanges_activated()
 {
     QStringList blacklist;
     //MainWindow main;
@@ -160,7 +171,7 @@ void settingsDialog::on_exchanges_activated(int index)
 void settingsDialog::on_pushButton_clicked()
 {
     QMessageBox msgBox;
-    QClipboard *clipboard;
+    QClipboard *clipboard=0;
     msgBox.setWindowTitle("Donate!");
     msgBox.setText("If you find this program useful please donate to.\nPaypal to jonssofh@hotmail.com\nBTC 1HJ5xJmePkfrYwixbZJaMUcXosiJhYRLbo\nDOT 12XHN5kYhSfCUdwiEAKMkW87L2kKV2AjerLMQukHJ4CnmKbL\nXRP rGzJmHraBUCWpncm3DGdscmAsuy3rDin4R\nADA addr1q9h424fgyqw3y0zer34myqn9lyr303nxcyvzttk8nyqmr7r0242jsgqazg79j8rtkgpxt7g8zlrxdsgcykhv0xgpk8uqh49hnw\nVET 0x136349A99A5a56617e7E7AdbE8c55a0712B0068F\nSupport is most appreciated.");
     QAbstractButton* pButtonYes = msgBox.addButton(tr("Copy to clipboard"), QMessageBox::YesRole);
@@ -170,7 +181,7 @@ void settingsDialog::on_pushButton_clicked()
     }
 }
 
-void settingsDialog::on_profilelist_activated(int index)
+void settingsDialog::on_profilelist_activated()
 {
     ui->profile->setText(ui->profilelist->currentText());
 }

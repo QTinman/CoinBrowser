@@ -13,8 +13,8 @@ QString exchange,dbfile="coinhistory.db",dbtable=crypt+"_coins";
 QSqlDatabase db;
 int colums=9,maxcoins=0;
 QString appgroup="coinbrowser",profile;
-double from1h=-2,to1h=5,from24h=0,to24h=100,from7d=-2,to7d=100,btc_price=58338,markedcap_percent,volume_percent,price_change_from,price_change_to,volum_min;
-bool change_1h,change_24h,change_7d,volume,marked_cap,use_volume,show_only_blacklisted,change_price,create_db=false;
+double from1h=-2,to1h=5,from24h=0,to24h=100,from7d=-2,to7d=100,btc_price=58338,markedcap_percent,volume_percent,price_change_from,price_change_to,volum_min,pricemin,pricemax;
+bool change_1h,change_24h,change_7d,volume,marked_cap,use_volume,show_only_blacklisted,change_price,create_db=false,pricefilter;
 
 
 QJsonArray MainWindow::ReadJson(const QString &path)
@@ -59,6 +59,7 @@ MainWindow::MainWindow(QWidget *parent)
     change_24h = loadsettings("change_24h").toBool();
     change_7d = loadsettings("change_7d").toBool();
     change_price = loadsettings("change_price").toBool();
+    pricefilter = loadsettings("pricefilter").toBool();
     marked_cap = loadsettings("marked_cap").toBool();
     use_volume = loadsettings("use_volume").toBool();
     show_only_blacklisted = loadsettings("show_only_blacklisted").toBool();
@@ -71,6 +72,8 @@ MainWindow::MainWindow(QWidget *parent)
     to7d = loadsettings("to7d").toDouble();
     price_change_from = loadsettings("price_change_from").toDouble();
     price_change_to = loadsettings("price_change_to").toDouble();
+    pricemin = loadsettings("pricemin").toDouble();
+    pricemax = loadsettings("pricemax").toDouble();
     maxcoins = loadsettings("maxcoins").toInt();
     markedcap_percent = loadsettings("markedcap_percent").toDouble();
     volume_percent = loadsettings("volume_percent").toDouble();
@@ -131,6 +134,8 @@ MainWindow::~MainWindow()
     savesettings("change_24h",change_24h);
     savesettings("change_7d",change_7d);
     savesettings("change_price",change_price);
+    savesettings("pricefilter",pricefilter);
+
     savesettings("marked_cap",marked_cap);
     savesettings("use_volume",use_volume);
     savesettings("show_only_blacklisted",show_only_blacklisted);
@@ -143,6 +148,8 @@ MainWindow::~MainWindow()
     savesettings("to7d",to7d);
     savesettings("price_change_from",price_change_from);
     savesettings("price_change_to",price_change_to);
+    savesettings("pricemin",pricemin);
+    savesettings("pricemax",pricemax);
 
     savesettings("markedcap_percent",markedcap_percent);
     savesettings("volume_percent",volume_percent);
@@ -264,7 +271,7 @@ QStringList MainWindow::readpairs()
 
 QStringList MainWindow::initializemodel()
 {
-        bool weekplus=false,dayplus=false,hourplus=false,volumeok=false,inrank=false,marked_cap_ok=false,priceplus=false;
+        bool weekplus=false,dayplus=false,hourplus=false,volumeok=false,inrank=false,marked_cap_ok=false,priceplus=false,priceok=false;
 
 
         double percent,price_change;
@@ -434,6 +441,8 @@ QStringList MainWindow::initializemodel()
                 else if (!change_24h) dayplus=true;
                 if (percent_change_7d < to7d && percent_change_7d > from7d && change_7d) weekplus=true;
                 else if (!change_7d) weekplus=true;
+                if (price < pricemax && price > pricemin && pricefilter) priceok=true;
+                else if (!pricefilter) priceok=true;
                 //if (percent_change_7d < 0) weekplus=true;
                 //weekplus=true;
 
@@ -451,7 +460,7 @@ QStringList MainWindow::initializemodel()
 
                 for ( const auto& i : pairs  ) //Write to tableview
                 {
-                    if ((weekplus && dayplus && hourplus && volumeok && i==symbol && inrank && marked_cap_ok && unique<2 && priceplus) || (!ui->filter->isChecked() && i==symbol && unique<2)) {
+                    if ((priceok && weekplus && dayplus && hourplus && volumeok && i==symbol && inrank && marked_cap_ok && unique<2 && priceplus) || (!ui->filter->isChecked() && i==symbol && unique<2)) {
 
                         modeldatalist << QString::number(id) << symbol << name << QString::number(price_change) << QString::number(volume_24h) << QString::number(percent_change_1h) << QString::number(percent_change_24h) << QString::number(percent_change_7d) << last_updated_time;
                         if (report) {
@@ -467,7 +476,7 @@ QStringList MainWindow::initializemodel()
                 hourplus = false;
                 dayplus = false;
                 priceplus = false;
-
+                priceok = false;
                 unique = 0;
                 marked_cap_ok = false;
                 coincounts++;

@@ -24,7 +24,7 @@ private slots:
 
     void on_toolReportPath_clicked();
 
-    void on_exchanges_activated(int index);
+    void on_exchanges_activated();
 
     void on_pushButton_clicked();
 
@@ -32,7 +32,7 @@ private slots:
 
     void savesettings(QString settings, QVariant attr);
 
-    void on_profilelist_activated(int index);
+    void on_profilelist_activated();
 
 private:
     Ui::settingsDialog *ui;

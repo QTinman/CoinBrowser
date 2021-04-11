@@ -11,9 +11,9 @@
 #include <QtSql/QSqlDatabase>
 
 extern QSqlDatabase db;
-extern QString exchange, appgroup;
-extern double from1h,to1h,from24h,to24h,from7d,to7d,markedcap_percent,volume_percent,price_change_from,price_change_to,volum_min;
-extern bool change_1h,change_24h,change_7d,marked_cap,use_volume,show_only_blacklisted,change_price,createdb;
+extern QString exchange, appgroup,crypt;
+extern double from1h,to1h,from24h,to24h,from7d,to7d,markedcap_percent,volume_percent,price_change_from,price_change_to,volum_min,pricemin,pricemax;
+extern bool change_1h,change_24h,change_7d,marked_cap,use_volume,show_only_blacklisted,change_price,createdb,pricefilter;
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
