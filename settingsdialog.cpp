@@ -20,7 +20,7 @@ settingsDialog::settingsDialog(QWidget *parent) :
     //MainWindow main;
     int index=0;
     QStringList blacklist,cryptolist,profilelist;
-    QStringList exchanges={"Binance","Bittrex"}, maincoins={"BTC","ETH","USDT"};
+    QStringList exchanges={"Binance","Bittrex","Kraken"}, maincoins={"BTC","ETH","USDT"};
     ui->exchanges->clear();
     ui->exchanges->addItems(exchanges);
 
@@ -62,6 +62,12 @@ settingsDialog::settingsDialog(QWidget *parent) :
     ui->reportPath->setText(reportPath);
     double btc_price = loadsettings("stake_coin_price").toDouble();
     ui->stake_coin_price->setValue(btc_price);
+    QString apikey = loadsettings("apikey").toString();
+    ui->apikey->setText(apikey);
+    bool autoupdatejson=loadsettings("autoupdatejson").toBool();
+    ui->autoupdatejson->setChecked(autoupdatejson);
+    int autojsonmin = loadsettings("autojsonmin").toInt();
+    ui->autojsonmin->setValue(autojsonmin);
 }
 settingsDialog::~settingsDialog()
 {
@@ -83,6 +89,9 @@ settingsDialog::~settingsDialog()
         appsettings.setValue("stake_coin_price",QVariant::fromValue(ui->stake_coin_price->value()));
         appsettings.setValue("report",QVariant::fromValue(ui->reports->isChecked()));
         appsettings.setValue("cryptolist", QVariant::fromValue(cryptolist));
+        appsettings.setValue("apikey",QVariant::fromValue(ui->apikey->text()));
+        appsettings.setValue("autoupdatejson",QVariant::fromValue(ui->autoupdatejson->isChecked()));
+        appsettings.setValue("autojsonmin",QVariant::fromValue(ui->autojsonmin->value()));
         appsettings.endGroup();
     }
     QSettings appsettings("QTinman",appgroup);
@@ -109,7 +118,9 @@ settingsDialog::~settingsDialog()
     savesettings("crypt",ui->maincoins->currentText());
     savesettings("stake_coin_price",ui->stake_coin_price->value());
     savesettings("report",ui->reports->isChecked());
-
+    savesettings("apikey",ui->apikey->text());
+    savesettings("autoupdatejson",ui->autoupdatejson->isChecked());
+    savesettings("autojsonmin",ui->autojsonmin->value());
     delete ui;
 }
 

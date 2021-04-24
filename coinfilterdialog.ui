@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>378</width>
-    <height>257</height>
+    <width>561</width>
+    <height>287</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -35,6 +35,9 @@
        <property name="maximum">
         <double>100.000000000000000</double>
        </property>
+       <property name="singleStep">
+        <double>0.500000000000000</double>
+       </property>
       </widget>
      </item>
      <item>
@@ -51,6 +54,9 @@
        </property>
        <property name="maximum">
         <double>100.000000000000000</double>
+       </property>
+       <property name="singleStep">
+        <double>0.500000000000000</double>
        </property>
       </widget>
      </item>
@@ -83,6 +89,9 @@
        <property name="maximum">
         <double>100.000000000000000</double>
        </property>
+       <property name="singleStep">
+        <double>0.500000000000000</double>
+       </property>
       </widget>
      </item>
      <item>
@@ -99,6 +108,9 @@
        </property>
        <property name="maximum">
         <double>100.000000000000000</double>
+       </property>
+       <property name="singleStep">
+        <double>0.500000000000000</double>
        </property>
       </widget>
      </item>
@@ -121,6 +133,9 @@
        <property name="maximum">
         <double>100.000000000000000</double>
        </property>
+       <property name="singleStep">
+        <double>0.500000000000000</double>
+       </property>
       </widget>
      </item>
      <item>
@@ -140,6 +155,9 @@
        </property>
        <property name="maximum">
         <double>100.000000000000000</double>
+       </property>
+       <property name="singleStep">
+        <double>0.500000000000000</double>
        </property>
       </widget>
      </item>
@@ -200,6 +218,9 @@
        <property name="maximum">
         <double>100.000000000000000</double>
        </property>
+       <property name="singleStep">
+        <double>0.500000000000000</double>
+       </property>
       </widget>
      </item>
      <item>
@@ -216,6 +237,9 @@
        </property>
        <property name="maximum">
         <double>999.000000000000000</double>
+       </property>
+       <property name="singleStep">
+        <double>0.500000000000000</double>
        </property>
       </widget>
      </item>
@@ -238,9 +262,12 @@
       </widget>
      </item>
      <item>
-      <widget class="QSpinBox" name="last_volume_percent">
+      <widget class="QDoubleSpinBox" name="last_volume_percent">
        <property name="maximum">
-        <number>200</number>
+        <double>200.000000000000000</double>
+       </property>
+       <property name="singleStep">
+        <double>0.500000000000000</double>
        </property>
       </widget>
      </item>
