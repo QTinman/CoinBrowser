@@ -68,6 +68,10 @@ settingsDialog::settingsDialog(QWidget *parent) :
     ui->autoupdatejson->setChecked(autoupdatejson);
     int autojsonmin = loadsettings("autojsonmin").toInt();
     ui->autojsonmin->setValue(autojsonmin);
+    int dbtimediffrance = loadsettings("dbtimediffrance").toInt();
+    ui->dbtimediffrance->setValue(dbtimediffrance);
+    int updateinterval=loadsettings("updateinterval").toInt();
+    ui->updateinterval->setValue(updateinterval);
 }
 settingsDialog::~settingsDialog()
 {
@@ -92,6 +96,8 @@ settingsDialog::~settingsDialog()
         appsettings.setValue("apikey",QVariant::fromValue(ui->apikey->text()));
         appsettings.setValue("autoupdatejson",QVariant::fromValue(ui->autoupdatejson->isChecked()));
         appsettings.setValue("autojsonmin",QVariant::fromValue(ui->autojsonmin->value()));
+        appsettings.setValue("dbtimediffrance",QVariant::fromValue(ui->dbtimediffrance->value()));
+        appsettings.setValue("updateinterval",QVariant::fromValue(ui->updateinterval->value()));
         appsettings.endGroup();
     }
     QSettings appsettings("QTinman",appgroup);
@@ -121,6 +127,9 @@ settingsDialog::~settingsDialog()
     savesettings("apikey",ui->apikey->text());
     savesettings("autoupdatejson",ui->autoupdatejson->isChecked());
     savesettings("autojsonmin",ui->autojsonmin->value());
+    savesettings("dbtimediffrance",ui->dbtimediffrance->value());
+    savesettings("updateinterval",ui->updateinterval->value());
+
     delete ui;
 }
 

@@ -310,9 +310,9 @@
       </spacer>
      </item>
      <item>
-      <widget class="QLabel" name="label_6">
+      <widget class="QCheckBox" name="volume_min_check">
        <property name="text">
-        <string>Volum min</string>
+        <string>Volume min</string>
        </property>
       </widget>
      </item>
