@@ -3,7 +3,7 @@ CoinBrowser is a tool for Freqtrade where the program writes pairs into text fil
 
 Data for this program is from CoinMarkedCap API. API key is needed for downloading the json file and placed in command files.
 
-If database does not exist upon startup the program creates coinhistory.db database and uses the data from exiting json file.
+If database does not exist upon startup the program creates coinhistory.db database from exiting json file.
 
 The database can be updated by checking UpdateDB and will it then upgrade from existing json file.
 
