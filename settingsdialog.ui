@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Dialog</string>
+   <string>Settings</string>
   </property>
   <property name="windowIcon">
    <iconset resource="resources.qrc">
@@ -158,7 +158,7 @@
      <item>
       <widget class="QLabel" name="label_7">
        <property name="text">
-        <string>API key</string>
+        <string>CoinMarketCap API key</string>
        </property>
       </widget>
      </item>
@@ -186,7 +186,7 @@
      <item>
       <widget class="QCheckBox" name="autoupdatejson">
        <property name="text">
-        <string>Auto update json</string>
+        <string>Auto update</string>
        </property>
       </widget>
      </item>
@@ -202,7 +202,11 @@
       </widget>
      </item>
      <item>
-      <widget class="QSpinBox" name="dbtimediffrance"/>
+      <widget class="QSpinBox" name="dbtimediffrance">
+       <property name="maximum">
+        <number>999</number>
+       </property>
+      </widget>
      </item>
      <item>
       <widget class="QLabel" name="label_10">

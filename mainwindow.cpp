@@ -103,7 +103,6 @@ MainWindow::MainWindow(QWidget *parent)
     model = new QStandardItemModel(modellist.length()/colums,colums,this);
     connect(ui->search,SIGNAL(textEdited(const QString &)),this,SLOT(searchmodel(const QString&)));
     bool autoupdatejson=loadsettings("autoupdatejson").toBool();
-    if (autoupdatejson) ui->updatedb->setHidden(true);
     int updateinterval=loadsettings("updateinterval").toInt();
     if (updateinterval == 0) updateinterval=1;
     if (autoupdatejson) {
@@ -291,7 +290,7 @@ QStringList MainWindow::initializemodel()
         QSqlRecord record;
         QFile csv_file;
         QString db_symbol,db_name, symbol,db_last_updated,sqlquery="";
-        double db_volume_24h,db_percent_change_1h,db_market_cap,db_price;
+        double db_volume_24h=0,db_percent_change_1h,db_market_cap,db_price=0;
         int json_year,json_mo,json_date,json_h,json_min, db_year,db_mo,db_date,db_h,db_min;
         //ui->messages->setText("Please wait.....");
         bool report=loadsettings("report").toBool();
@@ -321,10 +320,10 @@ QStringList MainWindow::initializemodel()
         if (!dbtime.isValid()) dbtime =QDateTime::currentDateTime();
         //QDateTime dbtime = jsonfileinf.lastModified().addSecs(dbtimediffrance-autojsonmin*60);
 
-        if (ui->updatedb->isChecked() || (ct >= dbtime && autoupdatejson)) {
+        if ((ct >= dbtime && autoupdatejson) || ui->actionUpdateDB->isChecked()) {
             create_db=true;
             if (!db.open()) qDebug() << "Error " << db.lastError().text();
-            ui->updatedb->setChecked(false);
+            ui->actionUpdateDB->setChecked(false);
             sqlquery = "DROP TABLE "+dbtable+";";
             QSqlQuery insert_qry(db);
             if (!insert_qry.exec(sqlquery)) ui->label->setText("Error "+insert_qry.lastError().text());
@@ -384,7 +383,7 @@ QStringList MainWindow::initializemodel()
                 json_mo = last_updated.mid(5,2).toInt();
                 json_date = last_updated.mid(8,2).toInt();
                 json_h = last_updated.mid(11,2).toInt();
-                json_min = last_updated.mid(14,2).toInt();
+                //json_min = last_updated.mid(14,2).toInt();
 
                 db_year = db_last_updated.mid(0,4).toInt();
                 db_mo = db_last_updated.mid(5,2).toInt();
@@ -416,8 +415,8 @@ QStringList MainWindow::initializemodel()
                 if (price_change < -100 || price_change > 100) price_change=0;
                 //qDebug() << db_price << " " << price;
 
-                if ((json_date > db_date || (json_date == db_date && json_h >= db_h+10)) && symbol == "ETH") ui->messages->setText("DB is over 10h old! From " +QString::number(db_date)+"/"+QString::number(db_mo)+", time "+QString::number(db_h)+":"+QString::number(db_min));
-                ui->messages->setText("Database is from "+QString::number(db_date)+"/"+QString::number(db_mo)+", time "+QString::number(db_h,'G',2)+":"+QString::number(db_min));
+                if ((json_date > db_date || (json_date == db_date && json_h >= db_h+10)) && symbol == "ETH") ui->messages->setText("DB is over 10h old! From " +QString::number(db_date,'g',2)+"/"+QString::number(db_mo)+", time "+QString::number(db_h)+":"+QString::number(db_min));
+                ui->messages->setText("Database is from "+QString::number(db_date)+"/"+QString::number(db_mo)+", time "+QString::number(db_h,'G',2)+":"+QString::number(db_min,'g',2));
                 /*if (ui->updatedb->isChecked() && 4==5)
                 {
                     QSqlQuery update_qry(db);
@@ -515,16 +514,17 @@ QStringList MainWindow::initializemodel()
                 unique = 0;
                 marked_cap_ok = false;
                 coincounts++;
-                if (maxcoins < coincounts && !ui->updatedb->isChecked()) break;
+                if (maxcoins <= coincounts && !ui->actionUpdateDB->isChecked()) break;
 
 
         }
         csv_file.close();
         create_db = false;
-        if (ct >= jsondt && autoupdatejson) {
+        if ((ct >= jsondt && autoupdatejson) || ui->actionUpdateJson->isChecked()) {
             QString path = loadsettings("json_path").toString();
             if (path == "") path = ".";
             QString crypto=crypt;
+            ui->actionUpdateJson->setChecked(false);
             if (crypto.contains("USD")) crypto="USD";
             QStringList commandlist;
             commandlist.append("-H");
@@ -667,10 +667,20 @@ void MainWindow::on_pushButton_3_clicked()
     settingsdialog.exec();
 }
 
-void MainWindow::on_updatedb_clicked()
+void MainWindow::on_actionUpdateDB_changed()
 {
     ui->messages->setText("Database updating...Please wait.");
     ui->messages->show();
     reload_model();
     ui->messages->setText("Database updated.");
+    reload_model();
+}
+
+void MainWindow::on_actionUpdateJson_changed()
+{
+    ui->messages->setText("Json updating...Please wait.");
+    ui->messages->show();
+    reload_model();
+    ui->messages->setText("Json updated.");
+    reload_model();
 }

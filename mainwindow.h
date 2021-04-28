@@ -44,7 +44,9 @@ private slots:
 
     void on_pushButton_3_clicked();
 
-    void on_updatedb_clicked();
+    void on_actionUpdateDB_changed();
+
+    void on_actionUpdateJson_changed();
 
 private:
     Ui::MainWindow *ui;
