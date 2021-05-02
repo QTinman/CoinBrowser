@@ -169,7 +169,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>UpdateDB</string>
+    <string>1_UpdateDB</string>
    </property>
   </action>
   <action name="actionUpdateJson">
@@ -177,7 +177,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>UpdateJson</string>
+    <string>2_UpdateJson</string>
    </property>
   </action>
  </widget>
