@@ -32,7 +32,7 @@ private slots:
 
     void savesettings(QString settings, QVariant attr);
 
-    void on_profilelist_activated();
+    void on_buttonBox_accepted();
 
 private:
     Ui::settingsDialog *ui;

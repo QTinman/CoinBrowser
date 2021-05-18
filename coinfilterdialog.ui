@@ -42,6 +42,12 @@
      </item>
      <item>
       <widget class="QLabel" name="label_2">
+       <property name="maximumSize">
+        <size>
+         <width>30</width>
+         <height>16777215</height>
+        </size>
+       </property>
        <property name="text">
         <string>-----&gt;</string>
        </property>
@@ -96,8 +102,14 @@
      </item>
      <item>
       <widget class="QLabel" name="label_3">
+       <property name="maximumSize">
+        <size>
+         <width>30</width>
+         <height>16777215</height>
+        </size>
+       </property>
        <property name="text">
-        <string>---&gt;</string>
+        <string>-----&gt;</string>
        </property>
       </widget>
      </item>
@@ -140,6 +152,12 @@
      </item>
      <item>
       <widget class="QLabel" name="label_4">
+       <property name="maximumSize">
+        <size>
+         <width>30</width>
+         <height>16777215</height>
+        </size>
+       </property>
        <property name="text">
         <string>-----&gt;</string>
        </property>
@@ -201,10 +219,36 @@
      </item>
     </layout>
    </item>
-   <item row="4" column="0" colspan="2">
+   <item row="3" column="1">
+    <widget class="QLabel" name="crypt">
+     <property name="text">
+      <string>TextLabel</string>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout_5">
      <item>
+      <widget class="QLabel" name="label_6">
+       <property name="maximumSize">
+        <size>
+         <width>10</width>
+         <height>16777215</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>*</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QCheckBox" name="pricechange">
+       <property name="maximumSize">
+        <size>
+         <width>100</width>
+         <height>16777215</height>
+        </size>
+       </property>
        <property name="text">
         <string>Price change</string>
        </property>
@@ -225,8 +269,14 @@
      </item>
      <item>
       <widget class="QLabel" name="label_7">
+       <property name="maximumSize">
+        <size>
+         <width>15</width>
+         <height>16777215</height>
+        </size>
+       </property>
        <property name="text">
-        <string>-&gt;</string>
+        <string>--&gt;</string>
        </property>
       </widget>
      </item>
@@ -255,6 +305,19 @@
    <item row="5" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
+      <widget class="QLabel" name="label_9">
+       <property name="maximumSize">
+        <size>
+         <width>10</width>
+         <height>16777215</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>*</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QCheckBox" name="use_last_volume">
        <property name="text">
         <string>Percent of last volume</string>
@@ -281,11 +344,28 @@
     </layout>
    </item>
    <item row="6" column="0">
-    <widget class="QCheckBox" name="volume_greater">
-     <property name="text">
-      <string>Last volume to be less than new volume</string>
-     </property>
-    </widget>
+    <layout class="QHBoxLayout" name="horizontalLayout_8">
+     <item>
+      <widget class="QLabel" name="label_11">
+       <property name="maximumSize">
+        <size>
+         <width>10</width>
+         <height>16777215</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>*</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="volume_greater">
+       <property name="text">
+        <string>Last volume to be less than new volume</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </item>
    <item row="7" column="0" colspan="2">
     <layout class="QHBoxLayout" name="horizontalLayout_6">
@@ -323,14 +403,14 @@
        </property>
       </widget>
      </item>
+     <item>
+      <widget class="QLabel" name="label_10">
+       <property name="text">
+        <string>*Uses DB</string>
+       </property>
+      </widget>
+     </item>
     </layout>
-   </item>
-   <item row="3" column="1">
-    <widget class="QLabel" name="crypt">
-     <property name="text">
-      <string>TextLabel</string>
-     </property>
-    </widget>
    </item>
   </layout>
  </widget>

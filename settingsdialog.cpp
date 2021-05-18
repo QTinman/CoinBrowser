@@ -11,7 +11,7 @@
 #include <QUrl>
 #include <QtWidgets>
 
-QString profill;
+
 settingsDialog::settingsDialog(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::settingsDialog)
@@ -20,36 +20,27 @@ settingsDialog::settingsDialog(QWidget *parent) :
     //MainWindow main;
     int index=0;
     QStringList blacklist,cryptolist,profilelist;
-    QStringList exchanges={"Binance","Bittrex","Kraken"}, maincoins={"BTC","ETH","USDT"};
+    QStringList exchanges={"Binance","Bittrex","Kraken","FTX"}, maincoins={"BTC","ETH","USDT"};
     ui->exchanges->clear();
     ui->exchanges->addItems(exchanges);
 
-    QSettings appsettings("QTinman",appgroup);
-    appsettings.beginGroup("General");
-    profill = appsettings.value("profile").toString();
-    profilelist = appsettings.value("profilelist").toStringList();
-    ui->profilelist->addItems(profilelist);
-    ui->profilelist->setCurrentText(profill);
-    appsettings.endGroup();
-    ui->profile->setText(profill);
     ui->maincoins->clear();
     cryptolist = loadsettings("cryptolist").toStringList();
     if (cryptolist.isEmpty()) cryptolist = maincoins;
     else ui->maincoins->addItems(cryptolist);
     //qDebug() << ui->exchanges->currentText();
-    QString crypt = loadsettings("crypt").toString();
+
+    QString crypt = loadsettings(ui->exchanges->currentText()+"_stake").toString();
     ui->stake_coin->setText(crypt+" Price usd");
     ui->message->setText("If you find this program useful please donate");
-    if (ui->exchanges->currentText()=="Binance") blacklist = loadsettings("binance_blacklist").toStringList();
-    if (ui->exchanges->currentText()=="Bittrex") blacklist = loadsettings("bittrex_blacklist").toStringList();
-     for(auto & a : blacklist) ui->blacklist->append(a);
-     for(auto & a : cryptolist) {
+    blacklist = loadsettings(exchange.toLower()+"_blacklist").toStringList();
+    for(auto & a : blacklist) ui->blacklist->append(a);
+    for(auto & a : cryptolist) {
          ui->maincoinslist->append(a);
          if (a==crypt) ui->maincoins->setCurrentIndex(index);
          index++;
     }
-
-    //ui->blacklist->setText(blacklist);
+    ui->maincoins->setCurrentText(loadsettings(exchange.toLower()+"_stake").toString());
     bool report=loadsettings("report").toBool();
     ui->reports->setChecked(report);
     QString json_path = loadsettings("json_path").toString();
@@ -60,7 +51,8 @@ settingsDialog::settingsDialog(QWidget *parent) :
     ui->cryptolistread->setText(cryptolistread);
     QString reportPath = loadsettings("reportpath").toString();
     ui->reportPath->setText(reportPath);
-    double btc_price = loadsettings("stake_coin_price").toDouble();
+    double btc_price = loadsettings(exchange.toLower()+"_stake_coin_price").toDouble();
+    if (crypt.contains("USD")) btc_price=1;
     ui->stake_coin_price->setValue(btc_price);
     QString apikey = loadsettings("apikey").toString();
     ui->apikey->setText(apikey);
@@ -75,60 +67,7 @@ settingsDialog::settingsDialog(QWidget *parent) :
 }
 settingsDialog::~settingsDialog()
 {
-    QStringList profilelist,blacklist=ui->blacklist->toPlainText().split("\n"),cryptolist=ui->maincoinslist->toPlainText().split("\n");
-    for (int i=0; i<ui->profilelist->count();i++) {
-        ui->profilelist->setCurrentIndex(i);
-        profilelist.append(ui->profilelist->currentText());
-    }
-    if (!profilelist.contains(ui->profile->text())) {
 
-        profilelist.append(ui->profile->text());
-        QSettings appsettings("QTinman",appgroup);
-        appsettings.beginGroup(ui->profile->text());
-        appsettings.setValue("json_path",QVariant::fromValue(ui->jsonpathstring->text()));
-        appsettings.setValue("cryptolistread",QVariant::fromValue(ui->cryptolistread->text()));
-        appsettings.setValue("cryptolistwrite",QVariant::fromValue(ui->cryptolistwrite->text()));
-        appsettings.setValue("reportpath",QVariant::fromValue(ui->reportPath->text()));
-        appsettings.setValue("crypt",QVariant::fromValue(ui->maincoins->currentText()));
-        appsettings.setValue("stake_coin_price",QVariant::fromValue(ui->stake_coin_price->value()));
-        appsettings.setValue("report",QVariant::fromValue(ui->reports->isChecked()));
-        appsettings.setValue("cryptolist", QVariant::fromValue(cryptolist));
-        appsettings.setValue("apikey",QVariant::fromValue(ui->apikey->text()));
-        appsettings.setValue("autoupdatejson",QVariant::fromValue(ui->autoupdatejson->isChecked()));
-        appsettings.setValue("autojsonmin",QVariant::fromValue(ui->autojsonmin->value()));
-        appsettings.setValue("dbtimediffrance",QVariant::fromValue(ui->dbtimediffrance->value()));
-        appsettings.setValue("updateinterval",QVariant::fromValue(ui->updateinterval->value()));
-        appsettings.endGroup();
-    }
-    QSettings appsettings("QTinman",appgroup);
-    appsettings.beginGroup("General");
-    appsettings.setValue("profile",QVariant::fromValue(ui->profile->text()));
-    appsettings.setValue("profilelist", QVariant::fromValue(profilelist));
-    appsettings.endGroup();
-    QString ex=ui->exchanges->currentText();
-
-
-    appsettings.beginGroup(profill);
-    appsettings.setValue("cryptolist", QVariant::fromValue(cryptolist));
-    if (ui->exchanges->currentText()=="Binance") appsettings.setValue("binance_blacklist", QVariant::fromValue(blacklist));
-    if (ui->exchanges->currentText()=="Bittrex") appsettings.setValue("bittrex_blacklist", QVariant::fromValue(blacklist));
-
-    appsettings.endGroup();
-
-    //for(auto & a : ui->blacklist) blacklist.append(a);
-
-    savesettings("json_path",ui->jsonpathstring->text());
-    savesettings("cryptolistread",ui->cryptolistread->text());
-    savesettings("cryptolistwrite",ui->cryptolistwrite->text());
-    savesettings("reportpath",ui->reportPath->text());
-    savesettings("crypt",ui->maincoins->currentText());
-    savesettings("stake_coin_price",ui->stake_coin_price->value());
-    savesettings("report",ui->reports->isChecked());
-    savesettings("apikey",ui->apikey->text());
-    savesettings("autoupdatejson",ui->autoupdatejson->isChecked());
-    savesettings("autojsonmin",ui->autojsonmin->value());
-    savesettings("dbtimediffrance",ui->dbtimediffrance->value());
-    savesettings("updateinterval",ui->updateinterval->value());
 
     delete ui;
 }
@@ -138,7 +77,7 @@ QVariant settingsDialog::loadsettings(QString settings)
 {
     QVariant returnvar;
     QSettings appsettings("QTinman",appgroup);
-    appsettings.beginGroup(profill);
+    appsettings.beginGroup(appgroup);
     returnvar = appsettings.value(settings);
     appsettings.endGroup();
     return returnvar;
@@ -147,7 +86,7 @@ QVariant settingsDialog::loadsettings(QString settings)
 void settingsDialog::savesettings(QString settings, QVariant attr)
 {
     QSettings appsettings("QTinman",appgroup);
-    appsettings.beginGroup(profill);
+    appsettings.beginGroup(appgroup);
     appsettings.setValue(settings,QVariant::fromValue(attr));
     appsettings.endGroup();
 }
@@ -182,10 +121,10 @@ void settingsDialog::on_exchanges_activated()
 {
     QStringList blacklist;
     //MainWindow main;
-    if (ui->exchanges->currentText()=="Binance") blacklist = loadsettings("binance_blacklist").toStringList();
-    if (ui->exchanges->currentText()=="Bittrex") blacklist = loadsettings("bittrex_blacklist").toStringList();
+    blacklist = loadsettings(exchange.toLower()+"_blacklist").toStringList();
     ui->blacklist->clear();
     for(auto & a : blacklist) ui->blacklist->append(a);
+    ui->maincoins->setCurrentText(loadsettings(ui->exchanges->currentText().toLower()+"_stake").toString());
 }
 
 void settingsDialog::on_pushButton_clicked()
@@ -201,7 +140,29 @@ void settingsDialog::on_pushButton_clicked()
     }
 }
 
-void settingsDialog::on_profilelist_activated()
+
+void settingsDialog::on_buttonBox_accepted()
 {
-    ui->profile->setText(ui->profilelist->currentText());
+    QStringList profilelist,blacklist=ui->blacklist->toPlainText().split("\n"),cryptolist=ui->maincoinslist->toPlainText().split("\n");
+    QSettings appsettings("QTinman",appgroup);
+    appsettings.beginGroup(appgroup);
+    QString ex=ui->exchanges->currentText();
+    appsettings.setValue("cryptolist", QVariant::fromValue(cryptolist));
+    appsettings.setValue(ui->exchanges->currentText().toLower()+"_blacklist", QVariant::fromValue(blacklist));
+    appsettings.setValue(ui->exchanges->currentText().toLower()+"_stake", QVariant::fromValue(ui->maincoins->currentText()));
+
+    appsettings.endGroup();
+
+    savesettings("json_path",ui->jsonpathstring->text());
+    savesettings("cryptolistread",ui->cryptolistread->text());
+    savesettings("cryptolistwrite",ui->cryptolistwrite->text());
+    savesettings("reportpath",ui->reportPath->text());
+    savesettings(exchange.toLower()+"_stake_coin_price",ui->stake_coin_price->value());
+    savesettings("report",ui->reports->isChecked());
+    savesettings("apikey",ui->apikey->text());
+    savesettings("autoupdatejson",ui->autoupdatejson->isChecked());
+    savesettings("autojsonmin",ui->autojsonmin->value());
+    savesettings("dbtimediffrance",ui->dbtimediffrance->value());
+    savesettings("updateinterval",ui->updateinterval->value());
+    //crypt = ui->maincoins->currentText();
 }

@@ -12,7 +12,7 @@ QString crypt="BTC";
 QString exchange,dbfile="coinhistory.db",dbtable=crypt+"_coins";
 QSqlDatabase db;
 int colums=9,maxcoins=0,addsec=1800;
-QString appgroup="coinbrowser",profile;
+QString appgroup="coinbrowser";
 double from1h=-2,to1h=5,from24h=0,to24h=100,from7d=-2,to7d=100,btc_price=58338,markedcap_percent,volume_percent,price_change_from,price_change_to,volum_min,pricemin,pricemax;
 bool change_1h,change_24h,change_7d,volume,marked_cap,use_volume,show_only_blacklisted,change_price,create_db=false,pricefilter,volume_min_check;
 
@@ -46,14 +46,7 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-    QSettings appsettings("QTinman",appgroup);
-    appsettings.beginGroup("General");
-    profile = appsettings.value("profile").toString();
-    if (profile == "") {
-        profile = appgroup;
-        appsettings.setValue("profile",QVariant::fromValue(profile));
-    }
-    appsettings.endGroup();
+
     setGeometry(loadsettings("position").toRect());
     change_1h = loadsettings("change_1h").toBool();
     change_24h = loadsettings("change_24h").toBool();
@@ -79,7 +72,12 @@ MainWindow::MainWindow(QWidget *parent)
     volume_percent = loadsettings("volume_percent").toDouble();
     volum_min  = loadsettings("volum_min").toDouble();
     volume_min_check  = loadsettings("volum_min_check").toBool();
-    crypt = loadsettings("crypt").toString();
+    QStringList exchanges={"Binance","Bittrex","Kraken","FTX"};
+    ui->filter->setChecked(true);
+    ui->comboBox->clear();
+    ui->comboBox->addItems(exchanges);
+    exchange = ui->comboBox->currentText();
+    crypt = loadsettings(exchange.toLower()+"_stake").toString();
     dbfile="coinhistory.db";
     dbtable=crypt+"_coins";
     btc_price = loadsettings("stake_coin_price").toDouble();
@@ -91,13 +89,11 @@ MainWindow::MainWindow(QWidget *parent)
     } else if ( !db.tables().contains( QString(dbtable) ))  createdb();
     sqlmodel = new QSqlTableModel(this,db);
     initializeModel(sqlmodel);
-    QStringList exchanges={"Binance","Bittrex","Kraken"};
-    ui->filter->setChecked(true);
-    ui->comboBox->clear();
-    ui->comboBox->addItems(exchanges);
+
     ui->messages->setText("");
     this->setWindowTitle("Cryptocurrency tool for Freqtrade, active stake coin "+crypt);
-    exchange = ui->comboBox->currentText();
+
+
     QStringList modellist = initializemodel();
     //QModelIndex index;
     model = new QStandardItemModel(modellist.length()/colums,colums,this);
@@ -170,7 +166,7 @@ QVariant MainWindow::loadsettings(QString settings)
 {
     QVariant returnvar;
     QSettings appsettings("QTinman",appgroup);
-    appsettings.beginGroup(profile);
+    appsettings.beginGroup(appgroup);
     returnvar = appsettings.value(settings);
     appsettings.endGroup();
     return returnvar;
@@ -179,7 +175,7 @@ QVariant MainWindow::loadsettings(QString settings)
 void MainWindow::savesettings(QString settings, QVariant attr)
 {
     QSettings appsettings("QTinman",appgroup);
-    appsettings.beginGroup(profile);
+    appsettings.beginGroup(appgroup);
     appsettings.setValue(settings,QVariant::fromValue(attr));
     appsettings.endGroup();
 }
@@ -217,17 +213,21 @@ QStringList MainWindow::readpairs()
     QString content,outstring;
     QStringList pairs,contentlist,blacklist={"SUSD","USD","EUR","USDC","BUSD","GBP","BNB","TUSD","UST"};
     QSettings appsettings("QTinman",appgroup);
-     appsettings.beginGroup(profile);
-    QStringList blacklist_binance = appsettings.value("binance_blacklist").value<QStringList>();
-    QStringList blacklist_bittrex = appsettings.value("bittrex_blacklist").value<QStringList>();
+     appsettings.beginGroup(appgroup);
+    //QStringList blacklist_binance = appsettings.value("binance_blacklist").value<QStringList>();
+    //QStringList blacklist_bittrex = appsettings.value("bittrex_blacklist").value<QStringList>();
+    //QStringList blacklist_kraken = appsettings.value("kraken_blacklist").value<QStringList>();
+    //QStringList blacklist_ftx = appsettings.value("ftx_blacklist").value<QStringList>();
+    QStringList blacklist_exchange = appsettings.value(exchange.toLower()+"_blacklist").value<QStringList>();
      appsettings.endGroup();
+    //crypt = loadsettings(exchange + "_stake").toString();
     QStringList bittrex_blacklist = loadsettings("bittrex_blacklist").toStringList();
     bool blackl=false,inrank=true;
     int s=10,counter=0,added=0;
     QString cryptolistread = loadsettings("cryptolistread").toString();
 
-    QString rawfilepath=cryptolistread+"/"+crypt.toLower()+"_raw_"+exchange.toLower()+".txt";
-    filein.setFileName(cryptolistread+"/"+crypt.toLower()+"_raw_"+exchange.toLower()+".txt");
+    //QString rawfilepath=cryptolistread+"/"+crypt.toLower()+"_raw_"+exchange.toLower()+".txt";
+    filein.setFileName(cryptolistread+"/raw_"+exchange.toLower()+".txt");
     if (filein.open(QIODevice::ReadOnly))
     {
        QTextStream in(&filein);
@@ -244,11 +244,15 @@ QStringList MainWindow::readpairs()
           for ( const auto& i : blacklist  )
             if (i == par1) blackl = true;
 
-          for ( const auto& i : blacklist_bittrex  ) //Bittrex blacklist
-            if (i == par1 && exchange == "Bittrex" && !show_only_blacklisted) blackl = true;
+          for ( const auto& i : blacklist_exchange  ) //Bittrex blacklist
+            if (i == par1 && !show_only_blacklisted) blackl = true;
 
-          for ( const auto& i : blacklist_binance  ) //Binance blacklist
+         /* for ( const auto& i : blacklist_binance  ) //Binance blacklist
             if (i == par1 && exchange == "Binance" && !show_only_blacklisted) blackl = true;
+          for ( const auto& i : blacklist_kraken  ) //Binance blacklist
+            if (i == par1 && exchange == "Kraken" && !show_only_blacklisted) blackl = true;
+          for ( const auto& i : blacklist_ftx  ) //Binance blacklist
+            if (i == par1 && exchange == "FTX" && !show_only_blacklisted) blackl = true;*/
           /*for ( const auto& i : pairs  )
           {
               counter++;
@@ -271,7 +275,8 @@ QStringList MainWindow::readpairs()
        //qDebug() << "Coins Added " << added;
 
     } else {
-        qDebug() << "Error " << filein.errorString();
+        ui->messages->setText(cryptolistread+"/raw_"+exchange.toLower()+".txt not found, create with freqtrade list-pairs --exchange "+exchange.toLower()+" > raw_"+exchange.toLower()+".txt");
+        //qDebug() << "Error " << filein.errorString();
     }
 
     return pairs;
@@ -308,8 +313,8 @@ QStringList MainWindow::initializemodel()
         if (stake.contains("USD")) stake="USD";
         QString path = loadsettings("json_path").toString();
         if (path =="") path="./crypto_"+stake+".json";
-        int dbtimediffrance = loadsettings("dbtimediffrance").toInt();
-        QString apikey = loadsettings("apikey").toString();
+        int dbtimediffrance = loadsettings("dbtimediffrance").toInt(), top_1h=0;
+        QString apikey = loadsettings("apikey").toString(), top_symbol="";
         bool autoupdatejson=loadsettings("autoupdatejson").toBool();
         int autojsonmin = loadsettings("autojsonmin").toInt();
         QFileInfo jsonfileinf(path+"/crypto_"+crypt+".json");
@@ -319,7 +324,7 @@ QStringList MainWindow::initializemodel()
         QDateTime dbtime = dbfileinf.lastModified().addSecs(dbtimediffrance*60);
         if (!dbtime.isValid()) dbtime =QDateTime::currentDateTime();
         //QDateTime dbtime = jsonfileinf.lastModified().addSecs(dbtimediffrance-autojsonmin*60);
-
+        dbtable=crypt+"_coins";
         if ((ct >= dbtime && autoupdatejson) || ui->actionUpdateDB->isChecked()) {
             create_db=true;
             if (!db.open()) qDebug() << "Error " << db.lastError().text();
@@ -331,7 +336,7 @@ QStringList MainWindow::initializemodel()
             createdb();
         }
 
-
+        btc_price = loadsettings(exchange.toLower()+"_stake_coin_price").toDouble();
         if (ui->maxcoins->text() == "") ui->maxcoins->setText(QString::number(maxcoins));
         else maxcoins = ui->maxcoins->text().toInt();
 
@@ -342,7 +347,7 @@ QStringList MainWindow::initializemodel()
                 QJsonObject data = value.toObject();
                 int id = data["cmc_rank"].toInt();
                 QString lastsymbol=symbol;
-                 symbol = data["symbol"].toString();
+                symbol = data["symbol"].toString();
                 QString name = data["name"].toString();
                 QJsonObject quote = value["quote"].toObject();
                 QJsonObject coin = quote[stake].toObject();
@@ -396,15 +401,6 @@ QStringList MainWindow::initializemodel()
                 QDate db_d(db_year,db_mo,db_date);
                 QDateTime lastdbupdate(db_d,QTime(db_h,db_min));
 
-                /*if (symbol=="ETH" && lastdbupdate.isValid()) {
-                    //savesettings("db_datetime",lastdbupdate);
-                    QSettings appsettings("QTinman",appgroup);
-                    appsettings.beginGroup(profile);
-                    appsettings.setValue("db_datetime",QVariant::fromValue(lastdbupdate));
-                    appsettings.endGroup();
-                }*/
-
-                //double startprice = ((100/btc_price)/db_price);
                 double startprice = btc_price*db_price;
                 double endprice = btc_price*price;
                 price_change = endprice-startprice;
@@ -414,39 +410,15 @@ QStringList MainWindow::initializemodel()
                 price_change = price_change*(endprice-startprice);
                 if (price_change < -100 || price_change > 100) price_change=0;
                 //qDebug() << db_price << " " << price;
+                if (top_1h<percent_change_1h) {
+                    top_1h = percent_change_1h;
+                    top_symbol = symbol;
+                }
 
                 if ((json_date > db_date || (json_date == db_date && json_h >= db_h+10)) && symbol == "ETH") ui->messages->setText("DB is over 10h old! From " +QString::number(db_date,'g',2)+"/"+QString::number(db_mo)+", time "+QString::number(db_h)+":"+QString::number(db_min));
-                ui->messages->setText("Database is from "+QString::number(db_date)+"/"+QString::number(db_mo)+", time "+QString::number(db_h,'G',2)+":"+QString::number(db_min,'g',2));
-                /*if (ui->updatedb->isChecked() && 4==5)
-                {
-                    QSqlQuery update_qry(db);
 
-                    sqlquery = "UPDATE "+dbtable+" SET id=:id, symbol=:symbol, name=:name, price=:price, volume_24h=:volume_24h, percent_change_1h=:percent_change_1h,"
-                    " percent_change_24h=:percent_change_24h, percent_change_7d=:percent_change_7d, market_cap=:market_cap, last_updated=:last_updated WHERE name=:name;";
-                    if (!update_qry.prepare(sqlquery))
-                      qDebug() << "prepare failed " << update_qry.lastError();
-                    update_qry.bindValue(":id",id);
-                    update_qry.bindValue(":symbol",symbol);
-                    update_qry.bindValue(":name",name);
-                    update_qry.bindValue(":price",price);
-                    update_qry.bindValue(":volume_24h",volume_24h);
-                    update_qry.bindValue(":percent_change_1h",percent_change_1h);
-                    update_qry.bindValue(":percent_change_24h",percent_change_24h);
-                    update_qry.bindValue(":percent_change_7d",percent_change_7d);
-                    update_qry.bindValue(":market_cap",percent_change_7d);
-                    update_qry.bindValue(":last_updated",last_updated);
-                    update_qry.exec();
-
-                }*/
-
-
-               if (!db.open())
+                if (!db.open())
                      qDebug() << db.lastError();
-
-                //sqlquery = "SELECT FROM "+dbtable+" WHERE ID="+QString::number(id)+";";
-                //QSqlQuery insert_qry(db);
-                /*if (!insert_qry.exec(sqlquery)) ui->label->setText("Error "+insert_qry.lastError().text());
-                insert_qry.finish();*/
 
                 if (create_db) {
 
@@ -518,6 +490,8 @@ QStringList MainWindow::initializemodel()
 
 
         }
+        if (jsonArray.count() == 0) ui->messages->setText("Json file not found, please update json file");
+        if (pairs.count() > 0 && jsonArray.count() > 0) ui->messages->setText("Database is from "+QString::number(db_date)+"/"+QString::number(db_mo)+", time "+QString::number(db_h,'G',2)+":"+QString::number(db_min,'g',2));
         csv_file.close();
         create_db = false;
         if ((ct >= jsondt && autoupdatejson) || ui->actionUpdateJson->isChecked()) {
@@ -540,7 +514,7 @@ QStringList MainWindow::initializemodel()
             myProcess->start("curl",commandlist);
             myProcess->waitForFinished(-1);
         }
-        ui->messages->setText(ui->messages->text()+", Found and added to list "+QString::number(coininlist));
+        if (pairs.count() > 0 && jsonArray.count() > 0) ui->messages->setText(ui->messages->text()+", Found and added to list "+QString::number(coininlist) + " / TopCoin: " + top_symbol + "  " + QString::number(top_1h) + "% 1h Change");
         return modeldatalist;
 }
 
@@ -549,6 +523,8 @@ QStringList MainWindow::initializemodel()
 void MainWindow::combo_refresh(int comboindex)
 {
     exchange = ui->comboBox->currentText();
+    crypt = loadsettings(exchange.toLower() + "_stake").toString();
+    this->setWindowTitle("Cryptocurrency tool for Freqtrade, active stake coin "+crypt);
     //qDebug() << "ComboRefresh";
     reload_model();
 }
@@ -665,6 +641,8 @@ void MainWindow::on_pushButton_3_clicked()
     QObject::connect(&settingsdialog, SIGNAL(destroyed()), this, SLOT(reload_model()));
     settingsdialog.setModal(true); // if nomodal is needed then create pointer inputdialog *datesearch; in mainwindow.h private section, then here use inputdialog = new datesearch(this); datesearch.show();
     settingsdialog.exec();
+    ui->filter->setChecked(false);
+    this->setWindowTitle("Cryptocurrency tool for Freqtrade, active stake coin "+crypt);
 }
 
 void MainWindow::on_actionUpdateDB_changed()

@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>379</width>
-    <height>468</height>
+    <height>489</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -28,41 +28,14 @@
      </property>
     </widget>
    </item>
-   <item row="0" column="1">
+   <item row="0" column="1" rowspan="2">
     <widget class="QPushButton" name="pushButton">
      <property name="text">
       <string>Donate!</string>
      </property>
     </widget>
    </item>
-   <item row="1" column="0">
-    <layout class="QHBoxLayout" name="horizontalLayout_6">
-     <item>
-      <widget class="QLabel" name="label_5">
-       <property name="text">
-        <string>Profile</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLineEdit" name="profile"/>
-     </item>
-     <item>
-      <widget class="QComboBox" name="profilelist"/>
-     </item>
-    </layout>
-   </item>
-   <item row="1" column="1" rowspan="2">
-    <widget class="QDialogButtonBox" name="buttonBox">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-     <property name="standardButtons">
-      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="0">
+   <item row="1" column="0" rowspan="2">
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
       <widget class="QLabel" name="jsonpath">
@@ -82,6 +55,16 @@
       </widget>
      </item>
     </layout>
+   </item>
+   <item row="2" column="1" rowspan="2">
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+     </property>
+    </widget>
    </item>
    <item row="3" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout_4">
@@ -146,13 +129,6 @@
      </item>
     </layout>
    </item>
-   <item row="5" column="1">
-    <widget class="QCheckBox" name="reports">
-     <property name="text">
-      <string>Reports</string>
-     </property>
-    </widget>
-   </item>
    <item row="6" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout_8">
      <item>
@@ -167,7 +143,7 @@
      </item>
     </layout>
    </item>
-   <item row="7" column="0" colspan="2">
+   <item row="7" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout_9">
      <item>
       <widget class="QLabel" name="label_8">
@@ -220,7 +196,17 @@
      </item>
     </layout>
    </item>
-   <item row="9" column="0" colspan="2">
+   <item row="9" column="0">
+    <layout class="QHBoxLayout" name="horizontalLayout_6">
+     <item>
+      <widget class="QComboBox" name="exchanges"/>
+     </item>
+     <item>
+      <widget class="QComboBox" name="maincoins"/>
+     </item>
+    </layout>
+   </item>
+   <item row="10" column="0" colspan="2">
     <layout class="QHBoxLayout" name="horizontalLayout_7">
      <item>
       <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -230,9 +216,6 @@
           <string>Blacklist</string>
          </property>
         </widget>
-       </item>
-       <item>
-        <widget class="QComboBox" name="exchanges"/>
        </item>
        <item>
         <widget class="QTextEdit" name="blacklist"/>
@@ -247,9 +230,6 @@
           <string>Stake coin</string>
          </property>
         </widget>
-       </item>
-       <item>
-        <widget class="QComboBox" name="maincoins"/>
        </item>
        <item>
         <widget class="QTextEdit" name="maincoinslist"/>
@@ -276,6 +256,13 @@
      </item>
     </layout>
    </item>
+   <item row="5" column="1">
+    <widget class="QCheckBox" name="reports">
+     <property name="text">
+      <string>Reports</string>
+     </property>
+    </widget>
+   </item>
   </layout>
  </widget>
  <tabstops>
@@ -287,9 +274,7 @@
   <tabstop>toolcryptolistwrite</tabstop>
   <tabstop>reportPath</tabstop>
   <tabstop>toolReportPath</tabstop>
-  <tabstop>exchanges</tabstop>
   <tabstop>blacklist</tabstop>
-  <tabstop>maincoins</tabstop>
   <tabstop>maincoinslist</tabstop>
  </tabstops>
  <resources>
