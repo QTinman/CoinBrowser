@@ -29,7 +29,7 @@ settingsDialog::settingsDialog(QWidget *parent) :
     if (cryptolist.isEmpty()) cryptolist = maincoins;
     else ui->maincoins->addItems(cryptolist);
     //qDebug() << ui->exchanges->currentText();
-
+    ui->exchanges->setCurrentText(exchange);
     QString crypt = loadsettings(ui->exchanges->currentText()+"_stake").toString();
     ui->stake_coin->setText(crypt+" Price usd");
     ui->message->setText("If you find this program useful please donate");
@@ -121,7 +121,7 @@ void settingsDialog::on_exchanges_activated()
 {
     QStringList blacklist;
     //MainWindow main;
-    blacklist = loadsettings(exchange.toLower()+"_blacklist").toStringList();
+    blacklist = loadsettings(ui->exchanges->currentText().toLower()+"_blacklist").toStringList();
     ui->blacklist->clear();
     for(auto & a : blacklist) ui->blacklist->append(a);
     ui->maincoins->setCurrentText(loadsettings(ui->exchanges->currentText().toLower()+"_stake").toString());
@@ -150,14 +150,14 @@ void settingsDialog::on_buttonBox_accepted()
     appsettings.setValue("cryptolist", QVariant::fromValue(cryptolist));
     appsettings.setValue(ui->exchanges->currentText().toLower()+"_blacklist", QVariant::fromValue(blacklist));
     appsettings.setValue(ui->exchanges->currentText().toLower()+"_stake", QVariant::fromValue(ui->maincoins->currentText()));
-
+    crypt = loadsettings(exchange.toLower()+"_stake").toString();
     appsettings.endGroup();
 
     savesettings("json_path",ui->jsonpathstring->text());
     savesettings("cryptolistread",ui->cryptolistread->text());
     savesettings("cryptolistwrite",ui->cryptolistwrite->text());
     savesettings("reportpath",ui->reportPath->text());
-    savesettings(exchange.toLower()+"_stake_coin_price",ui->stake_coin_price->value());
+    savesettings(ui->exchanges->currentText().toLower()+"_stake_coin_price",ui->stake_coin_price->value());
     savesettings("report",ui->reports->isChecked());
     savesettings("apikey",ui->apikey->text());
     savesettings("autoupdatejson",ui->autoupdatejson->isChecked());
