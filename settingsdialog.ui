@@ -28,14 +28,14 @@
      </property>
     </widget>
    </item>
-   <item row="0" column="1" rowspan="2">
+   <item row="0" column="1">
     <widget class="QPushButton" name="pushButton">
      <property name="text">
       <string>Donate!</string>
      </property>
     </widget>
    </item>
-   <item row="1" column="0" rowspan="2">
+   <item row="1" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
       <widget class="QLabel" name="jsonpath">
@@ -56,7 +56,7 @@
      </item>
     </layout>
    </item>
-   <item row="2" column="1" rowspan="2">
+   <item row="1" column="1" rowspan="2">
     <widget class="QDialogButtonBox" name="buttonBox">
      <property name="orientation">
       <enum>Qt::Vertical</enum>
@@ -66,7 +66,7 @@
      </property>
     </widget>
    </item>
-   <item row="3" column="0">
+   <item row="2" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout_4">
      <item>
       <widget class="QLabel" name="label_2">
@@ -87,7 +87,7 @@
      </item>
     </layout>
    </item>
-   <item row="4" column="0">
+   <item row="3" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout_2">
      <item>
       <widget class="QLabel" name="label">
@@ -108,7 +108,7 @@
      </item>
     </layout>
    </item>
-   <item row="5" column="0">
+   <item row="4" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout_3">
      <item>
       <widget class="QLabel" name="label_3">
@@ -129,7 +129,14 @@
      </item>
     </layout>
    </item>
-   <item row="6" column="0">
+   <item row="4" column="1">
+    <widget class="QCheckBox" name="reports">
+     <property name="text">
+      <string>Reports</string>
+     </property>
+    </widget>
+   </item>
+   <item row="5" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout_8">
      <item>
       <widget class="QLabel" name="label_7">
@@ -143,7 +150,7 @@
      </item>
     </layout>
    </item>
-   <item row="7" column="0">
+   <item row="6" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout_9">
      <item>
       <widget class="QLabel" name="label_8">
@@ -168,7 +175,7 @@
      </item>
     </layout>
    </item>
-   <item row="8" column="0" colspan="2">
+   <item row="7" column="0" colspan="2">
     <layout class="QHBoxLayout" name="horizontalLayout_10">
      <item>
       <widget class="QLabel" name="label_9">
@@ -196,7 +203,7 @@
      </item>
     </layout>
    </item>
-   <item row="9" column="0">
+   <item row="8" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout_6">
      <item>
       <widget class="QComboBox" name="exchanges"/>
@@ -206,7 +213,7 @@
      </item>
     </layout>
    </item>
-   <item row="10" column="0" colspan="2">
+   <item row="9" column="0" colspan="2">
     <layout class="QHBoxLayout" name="horizontalLayout_7">
      <item>
       <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -255,13 +262,6 @@
       </layout>
      </item>
     </layout>
-   </item>
-   <item row="5" column="1">
-    <widget class="QCheckBox" name="reports">
-     <property name="text">
-      <string>Reports</string>
-     </property>
-    </widget>
    </item>
   </layout>
  </widget>

@@ -73,6 +73,27 @@ MainWindow::MainWindow(QWidget *parent)
     volum_min  = loadsettings("volum_min").toDouble();
     volume_min_check  = loadsettings("volum_min_check").toBool();
     QStringList exchanges={"Binance","Bittrex","Kraken","FTX"};
+    QString pwd = QDir::currentPath();
+    QString json_path = loadsettings("json_path").toString();
+    if (json_path == "") savesettings("json_path",pwd);
+    QString cryptolistwrite = loadsettings("cryptolistwrite").toString();
+    if (cryptolistwrite == "") savesettings("cryptolistwrite",pwd);
+    QString cryptolistread = loadsettings("cryptolistread").toString();
+    if (cryptolistread == "") savesettings("cryptolistread",pwd);
+    QString reportPath = loadsettings("reportpath").toString();
+    if (reportPath == "") savesettings("reportpath",pwd);
+    for ( const auto& i : exchanges  ) {
+      QString stake = loadsettings(i.toLower()+"_stake").toString();
+      if (stake == "") {
+          savesettings(i.toLower()+"_stake","USDT");
+          savesettings(i.toLower()+"_stake_coin_price",1);
+      }
+    }
+    QStringList cryptolist = loadsettings("cryptolist").toStringList();
+    if (cryptolist.isEmpty()) {
+        cryptolist = {"BTC","ETH","USDT"};
+        savesettings("cryptolist",cryptolist);
+    }
     ui->filter->setChecked(true);
     ui->comboBox->clear();
     ui->comboBox->addItems(exchanges);
@@ -512,6 +533,7 @@ QStringList MainWindow::initializemodel()
             QProcess *myProcess = new QProcess(this);
             myProcess->setStandardOutputFile(path+"/crypto_"+crypt+".json");
             myProcess->start("curl",commandlist);
+            if (myProcess->exitCode() > 0) ui->messages->setText("Error downloading Json file : " + myProcess->errorString() + " Exitcode: " + QString::number(myProcess->exitCode()));
             myProcess->waitForFinished(-1);
         }
         if (pairs.count() > 0 && jsonArray.count() > 0) ui->messages->setText(ui->messages->text()+", Found and added to list "+QString::number(coininlist) + " / TopCoin: " + top_symbol + "  " + QString::number(top_1h) + "% 1h Change");
