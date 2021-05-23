@@ -247,7 +247,6 @@ QStringList MainWindow::readpairs()
     int s=10,counter=0,added=0;
     QString cryptolistread = loadsettings("cryptolistread").toString();
 
-    //QString rawfilepath=cryptolistread+"/"+crypt.toLower()+"_raw_"+exchange.toLower()+".txt";
     filein.setFileName(cryptolistread+"/raw_"+exchange.toLower()+".txt");
     if (filein.open(QIODevice::ReadOnly))
     {
@@ -267,19 +266,6 @@ QStringList MainWindow::readpairs()
 
           for ( const auto& i : blacklist_exchange  ) //Bittrex blacklist
             if (i == par1 && !show_only_blacklisted) blackl = true;
-
-         /* for ( const auto& i : blacklist_binance  ) //Binance blacklist
-            if (i == par1 && exchange == "Binance" && !show_only_blacklisted) blackl = true;
-          for ( const auto& i : blacklist_kraken  ) //Binance blacklist
-            if (i == par1 && exchange == "Kraken" && !show_only_blacklisted) blackl = true;
-          for ( const auto& i : blacklist_ftx  ) //Binance blacklist
-            if (i == par1 && exchange == "FTX" && !show_only_blacklisted) blackl = true;*/
-          /*for ( const auto& i : pairs  )
-          {
-              counter++;
-              if (i == par1) inrank = false;
-
-           }*/
 
           if (crypt == par1) blackl = true;
           if (inrank && !blackl  && crypt == par2 ) {
@@ -316,8 +302,8 @@ QStringList MainWindow::initializemodel()
         QSqlRecord record;
         QFile csv_file;
         QString db_symbol,db_name, symbol,db_last_updated,sqlquery="";
-        double db_volume_24h=0,db_percent_change_1h,db_market_cap,db_price=0;
-        int json_year,json_mo,json_date,json_h,json_min, db_year,db_mo,db_date,db_h,db_min;
+        double db_volume_24h=0,db_percent_change_1h,db_market_cap=0,db_price=0;
+        int json_year,json_mo,json_date,json_h, db_year,db_mo,db_date,db_h,db_min;
         //ui->messages->setText("Please wait.....");
         bool report=loadsettings("report").toBool();
         QString csv_string="Name,Volume new,Volume old,1h change,1h change old,Last updated, Old last updated";
@@ -404,6 +390,7 @@ QStringList MainWindow::initializemodel()
 
                   }
                 }
+                //if (symbol != db_symbol) qDebug() << symbol << " " << db_symbol;
                 QString last_updated_time = db_last_updated.mid(11,5)+"/"+last_updated.mid(11,5);
                 json_year = last_updated.mid(0,4).toInt();
                 json_mo = last_updated.mid(5,2).toInt();
@@ -424,12 +411,13 @@ QStringList MainWindow::initializemodel()
 
                 double startprice = btc_price*db_price;
                 double endprice = btc_price*price;
-                price_change = endprice-startprice;
-                price_change = price_change/startprice*100;
-                price_change = 100/db_price*btc_price*(price-db_price);
-                price_change = 100/startprice;
-                price_change = price_change*(endprice-startprice);
-                if (price_change < -100 || price_change > 100) price_change=0;
+                //price_change = endprice-startprice;
+                //price_change = price_change/startprice*100;
+                //price_change = 100/db_price*btc_price*(price-db_price);
+                //price_change = 100/startprice;
+                //price_change = price_change*(endprice-startprice);
+                price_change=(price/db_price*100)-100;
+                if (db_last_updated == last_updated || symbol != db_symbol) price_change=0;
                 //qDebug() << db_price << " " << price;
                 if (top_1h<percent_change_1h) {
                     top_1h = percent_change_1h;
@@ -533,7 +521,7 @@ QStringList MainWindow::initializemodel()
             QProcess *myProcess = new QProcess(this);
             myProcess->setStandardOutputFile(path+"/crypto_"+crypt+".json");
             myProcess->start("curl",commandlist);
-            if (myProcess->exitCode() > 0) ui->messages->setText("Error downloading Json file : " + myProcess->errorString() + " Exitcode: " + QString::number(myProcess->exitCode()));
+            if (myProcess->exitCode() > 0) ui->messages->setText("Error executing cURL : " + myProcess->errorString() + " Exitcode: " + QString::number(myProcess->exitCode()));
             myProcess->waitForFinished(-1);
         }
         if (pairs.count() > 0 && jsonArray.count() > 0) ui->messages->setText(ui->messages->text()+", Found and added to list "+QString::number(coininlist) + " / TopCoin: " + top_symbol + "  " + QString::number(top_1h) + "% 1h Change");
