@@ -25,7 +25,8 @@ coinfilterDialog::coinfilterDialog(QWidget *parent) :
     ui->pricechange_to->setValue(price_change_to);
     ui->pricemin->setValue(pricemin);
     ui->pricemax->setValue(pricemax);
-    ui->last_volume_percent->setValue(volume_percent);
+    ui->last_volume_percent_min->setValue(volume_percent_min);
+    ui->last_volume_percent_max->setValue(volume_percent_max);
     ui->volum_min->setValue(volum_min);
     ui->volume_min_check->setChecked(volume_min_check);
     ui->crypt->setText(crypt);
@@ -58,7 +59,8 @@ void coinfilterDialog::on_buttonBox_accepted()
     price_change_to = ui->pricechange_to->value();
     pricemin = ui->pricemin->value();
     pricemax = ui->pricemax->value();
-    volume_percent = ui->last_volume_percent->value();
+    volume_percent_min = ui->last_volume_percent_min->value();
+    volume_percent_max = ui->last_volume_percent_max->value();
     volum_min = ui->volum_min->value();
     volume_min_check = ui->volume_min_check->isChecked();
 }

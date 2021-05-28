@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>561</width>
-    <height>287</height>
+    <height>289</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -202,6 +202,12 @@
      </item>
      <item>
       <widget class="QLabel" name="label_8">
+       <property name="maximumSize">
+        <size>
+         <width>25</width>
+         <height>16777215</height>
+        </size>
+       </property>
        <property name="text">
         <string>--&gt;</string>
        </property>
@@ -325,12 +331,32 @@
       </widget>
      </item>
      <item>
-      <widget class="QDoubleSpinBox" name="last_volume_percent">
+      <widget class="QDoubleSpinBox" name="last_volume_percent_min">
        <property name="maximum">
         <double>200.000000000000000</double>
        </property>
        <property name="singleStep">
         <double>0.500000000000000</double>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="label_12">
+       <property name="maximumSize">
+        <size>
+         <width>25</width>
+         <height>16777215</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>---&gt;</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QDoubleSpinBox" name="last_volume_percent_max">
+       <property name="maximum">
+        <double>1000.000000000000000</double>
        </property>
       </widget>
      </item>
