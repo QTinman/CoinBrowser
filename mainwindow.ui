@@ -145,7 +145,7 @@
         <item>
          <widget class="QPushButton" name="pushButton_3">
           <property name="text">
-           <string>Setting</string>
+           <string>Settings</string>
           </property>
          </widget>
         </item>

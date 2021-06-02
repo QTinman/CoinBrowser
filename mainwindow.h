@@ -41,7 +41,7 @@ private slots:
     void on_filter_clicked();
     void reload_model();
     void on_pushButton_2_clicked();
-
+    void tableage();
     void on_pushButton_3_clicked();
 
     void on_actionUpdateDB_changed();

@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>379</width>
+    <width>383</width>
     <height>489</height>
    </rect>
   </property>
@@ -150,12 +150,12 @@
      </item>
     </layout>
    </item>
-   <item row="6" column="0">
+   <item row="6" column="0" colspan="2">
     <layout class="QHBoxLayout" name="horizontalLayout_9">
      <item>
       <widget class="QLabel" name="label_8">
        <property name="text">
-        <string>json update in min</string>
+        <string>json upd in min</string>
        </property>
       </widget>
      </item>
@@ -167,9 +167,16 @@
       </widget>
      </item>
      <item>
-      <widget class="QCheckBox" name="autoupdatejson">
+      <widget class="QLabel" name="label_5">
        <property name="text">
-        <string>Auto update</string>
+        <string>Table age in hours</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSpinBox" name="tableage">
+       <property name="maximum">
+        <number>999</number>
        </property>
       </widget>
      </item>
@@ -180,12 +187,12 @@
      <item>
       <widget class="QLabel" name="label_9">
        <property name="text">
-        <string>DB update in min</string>
+        <string>Nr. of rows in table</string>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QSpinBox" name="dbtimediffrance">
+      <widget class="QSpinBox" name="rowsintable">
        <property name="maximum">
         <number>999</number>
        </property>
@@ -200,6 +207,13 @@
      </item>
      <item>
       <widget class="QSpinBox" name="updateinterval"/>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="autoupdatejson">
+       <property name="text">
+        <string>Auto upd.</string>
+       </property>
+      </widget>
      </item>
     </layout>
    </item>

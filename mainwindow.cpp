@@ -11,7 +11,7 @@ QProcess process;
 QString crypt="BTC";
 QString exchange,dbfile="coinhistory.db",dbtable="";
 QSqlDatabase db;
-int colums=9,maxcoins=0,addsec=1800;
+int colums=10,maxcoins=0,addsec=1800;
 QString appgroup="coinbrowser";
 double from1h=-2,to1h=5,from24h=0,to24h=100,from7d=-2,to7d=100,btc_price=58338,markedcap_percent,volume_percent_min,volume_percent_max,price_change_from,price_change_to,volum_min,pricemin,pricemax;
 bool change_1h,change_24h,change_7d,volume,marked_cap,use_volume,show_only_blacklisted,change_price,create_db=false,pricefilter,volume_min_check;
@@ -108,8 +108,8 @@ MainWindow::MainWindow(QWidget *parent)
     if (!db.open()) {
          qDebug() << db.lastError();
     }
-    for ( const auto& i : db.tables()  ) if (i.contains(crypt+"_")) ui->tables->addItem(i);
-    ui->tables->setCurrentIndex(ui->tables->count()-1);
+    tableage();
+    ui->tables->setCurrentIndex(0);
     dbtable=ui->tables->currentText();
     if (dbtable=="") createdb();
     sqlmodel = new QSqlTableModel(this,db);
@@ -137,18 +137,21 @@ MainWindow::MainWindow(QWidget *parent)
     model->setHeaderData(0, Qt::Horizontal, "Id", Qt::DisplayRole);
     model->setHeaderData(1, Qt::Horizontal, "Symbol", Qt::DisplayRole);
     model->setHeaderData(2, Qt::Horizontal, "Name", Qt::DisplayRole);
-    model->setHeaderData(3, Qt::Horizontal, "100$ +/-", Qt::DisplayRole);
-    model->setHeaderData(4, Qt::Horizontal, "Volume", Qt::DisplayRole);
-    model->setHeaderData(5, Qt::Horizontal, "1h change", Qt::DisplayRole);
-    model->setHeaderData(6, Qt::Horizontal, "24h change", Qt::DisplayRole);
-    model->setHeaderData(7, Qt::Horizontal, "7d change", Qt::DisplayRole);
-    model->setHeaderData(8, Qt::Horizontal, "db/json time", Qt::DisplayRole);
+    model->setHeaderData(3, Qt::Horizontal, "Price "+crypt, Qt::DisplayRole);
+    model->setHeaderData(4, Qt::Horizontal, "DB +/- %", Qt::DisplayRole);
+    model->setHeaderData(5, Qt::Horizontal, "Volume", Qt::DisplayRole);
+    model->setHeaderData(6, Qt::Horizontal, "1h change", Qt::DisplayRole);
+    model->setHeaderData(7, Qt::Horizontal, "24h change", Qt::DisplayRole);
+    model->setHeaderData(8, Qt::Horizontal, "7d change", Qt::DisplayRole);
+    model->setHeaderData(9, Qt::Horizontal, "db/json time", Qt::DisplayRole);
     connect(ui->comboBox, QOverload<int>::of(&QComboBox::currentIndexChanged),
             [=](int index){ combo_refresh(index); });
     ui->tableView->setModel(model);
     ui->tableView->setSortingEnabled(true);
+
     ui->tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     ui->tableView->sortByColumn(0,Qt::AscendingOrder);
+
 }
 
 MainWindow::~MainWindow()
@@ -211,6 +214,38 @@ void MainWindow::initializeModel(QSqlTableModel *sqlmodel)
     sqlmodel->setTable(dbtable);
     sqlmodel->setEditStrategy(QSqlTableModel::OnManualSubmit);
     sqlmodel->select();
+}
+
+void MainWindow::tableage()
+{
+    int tableage = loadsettings("tableage").toInt();
+    if (tableage == 0) tableage = 999;
+    ui->tables->clear();
+    QDateTime cdt = QDateTime::currentDateTime();
+    for ( const auto& i : db.tables()  ) if (i.contains(crypt+"_")) {
+        int mm,hh,dd,mo,s,u;
+        u=i.indexOf("_");
+        s=i.indexOf("‑");
+        dd=i.mid(u+1,s-u-1).toInt();
+        u=i.indexOf("_",u+1);
+        mo=i.mid(s+1,u-s-1).toInt();
+        s=i.indexOf("‑",s+1);
+        hh=i.mid(u+1,s-u-1).toInt();
+        mm=i.mid(s+1,i.length()-s-1).toInt();
+        QDate datetable;
+        QTime timetable;
+        datetable.setDate(2021,mo,dd);
+        timetable.setHMS(hh,mm,0);
+        QDateTime cdttable;
+        cdttable.setDate(datetable);
+        cdttable.setTime(timetable);
+        //qDebug() << cdt.addSecs(-tableage*3600) << " " << cdttable;
+        if (cdt.addSecs(-tableage*3600) < cdttable) {
+
+            ui->tables->addItem(i);
+        }
+    }
+    ui->tables->setCurrentIndex(0);
 }
 
 void MainWindow::createdb()
@@ -324,20 +359,20 @@ QStringList MainWindow::initializemodel()
         if (stake.contains("USD")) stake="USD";
         QString path = loadsettings("json_path").toString();
         if (path =="") path="./crypto_"+stake+".json";
-        int dbtimediffrance = loadsettings("dbtimediffrance").toInt(), top_1h=0;
-        QString apikey = loadsettings("apikey").toString(), top_symbol="";
+        int rowsintable = loadsettings("rowsintable").toInt(), top_1h=0, bottom_1h=0;
+        QString apikey = loadsettings("apikey").toString(), top_symbol="",bottom_symbol="";
         bool autoupdatejson=loadsettings("autoupdatejson").toBool();
         int autojsonmin = loadsettings("autojsonmin").toInt();
         QFileInfo jsonfileinf(path+"/crypto_"+crypt+".json");
-        QFileInfo dbfileinf(dbfile);
+        //QFileInfo dbfileinf(dbfile);
         QDateTime jsondt = jsonfileinf.lastModified().addSecs(autojsonmin*60);
         if (!jsondt.isValid()) jsondt =QDateTime::currentDateTime();
-        QDateTime dbtime = dbfileinf.lastModified().addSecs(dbtimediffrance*60);
-        if (!dbtime.isValid()) dbtime =QDateTime::currentDateTime();
+        //QDateTime dbtime = dbfileinf.lastModified().addSecs(dbtimediffrance*60);
+        //if (!dbtime.isValid()) dbtime =QDateTime::currentDateTime();
         //QDateTime dbtime = jsonfileinf.lastModified().addSecs(dbtimediffrance-autojsonmin*60);
         //dbtable=crypt+"_coins";
         dbtable=ui->tables->currentText();
-        if ((ct >= dbtime && autoupdatejson) || ui->actionUpdateJson->isChecked()) {
+        if ((ct >= jsondt && autoupdatejson) || ui->actionUpdateJson->isChecked()) {
             create_db=true;
             if (!db.open()) qDebug() << "Error " << db.lastError().text();
             ui->actionUpdateDB->setChecked(false);
@@ -415,8 +450,8 @@ QStringList MainWindow::initializemodel()
                 QDate db_d(db_year,db_mo,db_date);
                 QDateTime lastdbupdate(db_d,QTime(db_h,db_min));
 
-                double startprice = btc_price*db_price;
-                double endprice = btc_price*price;
+                //double startprice = btc_price*db_price;
+                //double endprice = btc_price*price;
                 //price_change = endprice-startprice;
                 //price_change = price_change/startprice*100;
                 //price_change = 100/db_price*btc_price*(price-db_price);
@@ -429,7 +464,10 @@ QStringList MainWindow::initializemodel()
                     top_1h = percent_change_1h;
                     top_symbol = symbol;
                 }
-
+                if (bottom_1h>percent_change_1h) {
+                    bottom_1h = percent_change_1h;
+                    bottom_symbol = symbol;
+                }
                 if ((json_date > db_date || (json_date == db_date && json_h >= db_h+10)) && symbol == "ETH") ui->messages->setText("DB is over 10h old! From " +QString::number(db_date,'g',2)+"/"+QString::number(db_mo)+", time "+QString::number(db_h)+":"+QString::number(db_min));
 
                 if (!db.open())
@@ -481,8 +519,7 @@ QStringList MainWindow::initializemodel()
                 for ( const auto& i : pairs  ) //Write to tableview
                 {
                     if ((priceok && weekplus && dayplus && hourplus && volumeok && volummin && i==symbol && inrank && marked_cap_ok && unique<2 && priceplus) || (!ui->filter->isChecked() && i==symbol && unique<2)) {
-
-                        modeldatalist << QString::number(id) << symbol << name << QString::number(price_change) << QString::number(volume_24h, 'g', 9) << QString::number(percent_change_1h, 'g', 5) << QString::number(percent_change_24h, 'g', 5) << QString::number(percent_change_7d, 'G', 5) << last_updated_time;
+                        modeldatalist << QString::number(id) << symbol << name << QString::number(price, 'F', 3) << QString::number(price_change, 'F', 2) << QString::number(volume_24h, 'F', 2) << QString::number(percent_change_1h, 'F', 2) << QString::number(percent_change_24h, 'F', 2) << QString::number(percent_change_7d, 'F', 2) << last_updated_time;
                         if (report) {
                             csv_string=name+","+QString::number(volume_24h)+","+QString::number(db_volume_24h)+","+QString::number(percent_change_1h)+","+QString::number(db_percent_change_1h)+","+last_updated+","+db_last_updated+","+cd.toString()+","+ct.toString();
                             outStream << csv_string+"\n";
@@ -501,7 +538,7 @@ QStringList MainWindow::initializemodel()
                 unique = 0;
                 marked_cap_ok = false;
                 coincounts++;
-                if (maxcoins <= coincounts && !ui->actionUpdateDB->isChecked()) break;
+                if ((maxcoins <= coincounts && !ui->actionUpdateJson->isChecked()) || (ui->actionUpdateDB->isChecked() && rowsintable <= coincounts)) break;
 
 
         }
@@ -509,7 +546,7 @@ QStringList MainWindow::initializemodel()
         if (pairs.count() > 0 && jsonArray.count() > 0) ui->messages->setText("Database is from "+QString::number(db_date)+"/"+QString::number(db_mo)+", time "+QString::number(db_h,'G',2)+":"+QString::number(db_min).rightJustified(2,'0'));
         csv_file.close();
         create_db = false;
-        if ((ct >= jsondt && autoupdatejson) || ui->actionUpdateJson->isChecked()) {
+        if (((ct >= jsondt && autoupdatejson) || ui->actionUpdateJson->isChecked()) && !apikey.isEmpty()) {
             QString path = loadsettings("json_path").toString();
             if (path == "") path = ".";
             QString crypto=crypt;
@@ -529,8 +566,8 @@ QStringList MainWindow::initializemodel()
             myProcess->start("curl",commandlist);
             if (myProcess->exitCode() > 0) ui->messages->setText("Error executing cURL : " + myProcess->errorString() + " Exitcode: " + QString::number(myProcess->exitCode()));
             myProcess->waitForFinished(-1);
-        }
-        if (pairs.count() > 0 && jsonArray.count() > 0) ui->messages->setText(ui->messages->text()+", Found and added to list "+QString::number(coininlist) + " / TopCoin: " + top_symbol + "  " + QString::number(top_1h) + "% 1h Change");
+        } else if (apikey.isEmpty()) ui->messages->setText("API key missing, please insert API key in settings.");
+        if (pairs.count() > 0 && jsonArray.count() > 0 && !apikey.isEmpty()) ui->messages->setText(ui->messages->text()+", Found and added to list "+QString::number(coininlist) + " / Winner: " + top_symbol + "  " + QString::number(top_1h) + "% / Looser: " + bottom_symbol + "  " + QString::number(bottom_1h)+"%");
         return modeldatalist;
 }
 
@@ -609,6 +646,7 @@ void MainWindow::searchmodel(const QString& text)
     }
 }
 
+
 void MainWindow::reload_model()
 {
     int row=0,i=0,col;
@@ -619,9 +657,11 @@ void MainWindow::reload_model()
        for (col=0;col<colums;col++) {
          index=model->index(row,col,QModelIndex());
          if (col == 0) model->setData(index,modellist[i].toInt());
-         if (col < 3 & col > 0) model->setData(index,modellist[i]);
-         if (col < 8 & col > 2) model->setData(index,modellist[i].toDouble());
-         if (col == 8) model->setData(index,modellist[i]);
+         if (col < 4 & col > 0) model->setData(index,modellist[i]);
+         if (col < 10 & col > 2) {
+             model->setData(index,modellist[i]);
+             model->setData(index, Qt::AlignRight, Qt::TextAlignmentRole);
+         }
          i++;
         }
       row++;
@@ -663,6 +703,7 @@ void MainWindow::on_pushButton_3_clicked()
     settingsdialog.setModal(true); // if nomodal is needed then create pointer inputdialog *datesearch; in mainwindow.h private section, then here use inputdialog = new datesearch(this); datesearch.show();
     settingsdialog.exec();
     ui->filter->setChecked(false);
+    tableage();
     this->setWindowTitle("Cryptocurrency tool for Freqtrade, active stake coin "+crypt);
 }
 
