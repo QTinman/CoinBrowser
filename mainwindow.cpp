@@ -450,16 +450,8 @@ QStringList MainWindow::initializemodel()
                 QDate db_d(db_year,db_mo,db_date);
                 QDateTime lastdbupdate(db_d,QTime(db_h,db_min));
 
-                //double startprice = btc_price*db_price;
-                //double endprice = btc_price*price;
-                //price_change = endprice-startprice;
-                //price_change = price_change/startprice*100;
-                //price_change = 100/db_price*btc_price*(price-db_price);
-                //price_change = 100/startprice;
-                //price_change = price_change*(endprice-startprice);
                 price_change=(price/db_price*100)-100;
                 if (db_last_updated == last_updated || symbol != db_symbol) price_change=0;
-                //qDebug() << db_price << " " << price;
                 if (top_1h<percent_change_1h) {
                     top_1h = percent_change_1h;
                     top_symbol = symbol;
@@ -538,7 +530,7 @@ QStringList MainWindow::initializemodel()
                 unique = 0;
                 marked_cap_ok = false;
                 coincounts++;
-                if ((maxcoins <= coincounts && !ui->actionUpdateJson->isChecked()) || (ui->actionUpdateDB->isChecked() && rowsintable <= coincounts)) break;
+                if ((maxcoins <= coincounts && !ui->actionUpdateJson->isChecked()) || (ui->actionUpdateJson->isChecked() && rowsintable <= coincounts)) break;
 
 
         }
@@ -583,6 +575,7 @@ void MainWindow::combo_refresh(int comboindex)
     dbtable=ui->tables->currentText();
     if (dbtable=="") createdb();
     this->setWindowTitle("Cryptocurrency tool for Freqtrade, active stake coin "+crypt);
+    model->setHeaderData(3, Qt::Horizontal, "Price "+crypt, Qt::DisplayRole);
     //qDebug() << "ComboRefresh";
     reload_model();
 }
