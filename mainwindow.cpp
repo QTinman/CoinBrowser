@@ -11,6 +11,7 @@ QProcess process;
 QString crypt="BTC";
 QString exchange,dbfile="coinhistory.db",dbtable="";
 QSqlDatabase db;
+QTimer *timer;
 int colums=10,maxcoins=0,addsec=1800;
 QString appgroup="coinbrowser";
 double from1h=-2,to1h=5,from24h=0,to24h=100,from7d=-2,to7d=100,btc_price=58338,markedcap_percent,volume_percent_min,volume_percent_max,price_change_from,price_change_to,volum_min,pricemin,pricemax;
@@ -46,7 +47,8 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-
+    //calc_profit();
+    timer = new QTimer(this);
     setGeometry(loadsettings("position").toRect());
     change_1h = loadsettings("change_1h").toBool();
     change_24h = loadsettings("change_24h").toBool();
@@ -123,14 +125,7 @@ MainWindow::MainWindow(QWidget *parent)
     //QModelIndex index;
     model = new QStandardItemModel(modellist.length()/colums,colums,this);
     connect(ui->search,SIGNAL(textEdited(const QString &)),this,SLOT(searchmodel(const QString&)));
-    bool autoupdatejson=loadsettings("autoupdatejson").toBool();
-    int updateinterval=loadsettings("updateinterval").toInt();
-    if (updateinterval == 0) updateinterval=1;
-    if (autoupdatejson) {
-        QTimer *timer = new QTimer(this);
-        connect(timer, SIGNAL(timeout()), this, SLOT(reload_model()));
-        timer->start(updateinterval*60000);
-    }
+    loadtimer();
 
     reload_model();
 
@@ -214,6 +209,19 @@ void MainWindow::initializeModel(QSqlTableModel *sqlmodel)
     sqlmodel->setTable(dbtable);
     sqlmodel->setEditStrategy(QSqlTableModel::OnManualSubmit);
     sqlmodel->select();
+}
+
+void MainWindow::loadtimer()
+{
+    bool autoupdatejson=loadsettings("autoupdatejson").toBool();
+    int autojsonmin=loadsettings("autojsonmin").toInt();
+    if (autojsonmin == 0) autojsonmin=60;
+    if (autoupdatejson) {
+        if (!timer->isActive()) {
+            connect(timer, SIGNAL(timeout()), this, SLOT(reload_model()));
+            timer->start(autojsonmin*60000);
+        }
+    }
 }
 
 void MainWindow::tableage()
@@ -367,19 +375,11 @@ QStringList MainWindow::initializemodel()
         //QFileInfo dbfileinf(dbfile);
         QDateTime jsondt = jsonfileinf.lastModified().addSecs(autojsonmin*60);
         if (!jsondt.isValid()) jsondt =QDateTime::currentDateTime();
-        //QDateTime dbtime = dbfileinf.lastModified().addSecs(dbtimediffrance*60);
-        //if (!dbtime.isValid()) dbtime =QDateTime::currentDateTime();
-        //QDateTime dbtime = jsonfileinf.lastModified().addSecs(dbtimediffrance-autojsonmin*60);
-        //dbtable=crypt+"_coins";
         dbtable=ui->tables->currentText();
         if ((ct >= jsondt && autoupdatejson) || ui->actionUpdateJson->isChecked()) {
             create_db=true;
             if (!db.open()) qDebug() << "Error " << db.lastError().text();
             ui->actionUpdateDB->setChecked(false);
-            //sqlquery = "DROP TABLE "+dbtable+";";
-            //QSqlQuery insert_qry(db);
-            //if (!insert_qry.exec(sqlquery)) ui->label->setText("Error "+insert_qry.lastError().text());
-            //insert_qry.finish();
             createdb();
         }
 
@@ -651,10 +651,9 @@ void MainWindow::reload_model()
          index=model->index(row,col,QModelIndex());
          if (col == 0) model->setData(index,modellist[i].toInt());
          if (col < 4 & col > 0) model->setData(index,modellist[i]);
-         if (col < 10 & col > 2) {
-             model->setData(index,modellist[i]);
-             model->setData(index, Qt::AlignRight, Qt::TextAlignmentRole);
-         }
+         if (col < 9 & col > 2) model->setData(index,modellist[i].toDouble());
+         if (col == 9) model->setData(index,modellist[i]);
+         model->setData(index, Qt::AlignCenter, Qt::TextAlignmentRole);
          i++;
         }
       row++;
@@ -672,12 +671,12 @@ void MainWindow::on_pushButton_2_clicked()
 }
 
 
-void calc_profit()
+void MainWindow::calc_profit()
 {
     //Adds daily profit to totalsum and calculate a new day.
     int i;
-    float dailyprofit=24,percent,start=200;
-    for (i=1;i<=20;i++) {
+    float dailyprofit=5,percent,start=250,days=30;
+    for (i=1;i<=days;i++) {
         percent = (dailyprofit/start)*100;
         start += dailyprofit;
         qDebug() << "Percent " << percent << "\n";
@@ -697,6 +696,7 @@ void MainWindow::on_pushButton_3_clicked()
     settingsdialog.exec();
     ui->filter->setChecked(false);
     tableage();
+    loadtimer();
     this->setWindowTitle("Cryptocurrency tool for Freqtrade, active stake coin "+crypt);
 }
 

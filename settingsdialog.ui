@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>383</width>
+    <width>476</width>
     <height>489</height>
    </rect>
   </property>
@@ -155,7 +155,7 @@
      <item>
       <widget class="QLabel" name="label_8">
        <property name="text">
-        <string>json upd in min</string>
+        <string>json auto update in min</string>
        </property>
       </widget>
      </item>
@@ -169,7 +169,7 @@
      <item>
       <widget class="QLabel" name="label_5">
        <property name="text">
-        <string>Table age in hours</string>
+        <string>Table age in hours shown</string>
        </property>
       </widget>
      </item>
@@ -187,7 +187,7 @@
      <item>
       <widget class="QLabel" name="label_9">
        <property name="text">
-        <string>Nr. of rows in table</string>
+        <string>Nr. of pairs updated in table update</string>
        </property>
       </widget>
      </item>
@@ -197,16 +197,6 @@
         <number>999</number>
        </property>
       </widget>
-     </item>
-     <item>
-      <widget class="QLabel" name="label_10">
-       <property name="text">
-        <string>Autocheck interval min</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QSpinBox" name="updateinterval"/>
      </item>
      <item>
       <widget class="QCheckBox" name="autoupdatejson">

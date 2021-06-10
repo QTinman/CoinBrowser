@@ -75,8 +75,8 @@ settingsDialog::settingsDialog(QWidget *parent) :
         ui->rowsintable->setValue(500);
         rowsintable = 500;
     } else ui->rowsintable->setValue(rowsintable);
-    int updateinterval=loadsettings("updateinterval").toInt();
-    ui->updateinterval->setValue(updateinterval);
+    //int updateinterval=loadsettings("updateinterval").toInt();
+    //ui->updateinterval->setValue(updateinterval);
 }
 settingsDialog::~settingsDialog()
 {
@@ -176,7 +176,7 @@ void settingsDialog::on_buttonBox_accepted()
     savesettings("autoupdatejson",ui->autoupdatejson->isChecked());
     savesettings("autojsonmin",ui->autojsonmin->value());
     savesettings("rowsintable",ui->rowsintable->value());
-    savesettings("updateinterval",ui->updateinterval->value());
+    //savesettings("updateinterval",ui->updateinterval->value());
     savesettings("tableage",ui->tableage->value());
     //crypt = ui->maincoins->currentText();
 }

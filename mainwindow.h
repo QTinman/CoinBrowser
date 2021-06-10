@@ -43,9 +43,9 @@ private slots:
     void on_pushButton_2_clicked();
     void tableage();
     void on_pushButton_3_clicked();
-
+    void loadtimer();
     void on_actionUpdateDB_changed();
-
+    void calc_profit();
     void on_actionUpdateJson_changed();
 
     void on_tables_activated(int index);
