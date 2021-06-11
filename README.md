@@ -5,19 +5,16 @@ Data for this program is from CoinMarkedCap API. API key is needed for downloadi
 
 If database does not exist upon startup the program creates coinhistory.db database from exiting json file.
 
-The database can be updated by checking UpdateDB and will it then upgrade from existing json file.
+The database is updated into own table from existing json file right before new json file is downloaded.
 
-Typically it is good to have the database few hours older than the json file as the DB should be few hours older for some calculations.
-The settings are little quirky and the program might need to be restarted after setting stake coin.
+Database can then be selected from droppdown in mainwindow.
 
-cUrl is needed for using json download scripts.
 
 ![Welcome screen](https://github.com/QTinman/CoinBrowser/blob/main/screencap.png)
 
 
 About files
-The txt files with _raw_ in the name is created with command "freqtrade list-pairs -c config_ETH_Bittrex.json | grep ETH" and copied to file with this format.
-The get_ files or autoupdate are used to download jason files. 
+The txt files starting with raw_ in the name is created with command "docker-compose run --rm freqtrade list-pairs --exchange binance" and the table from the output copied to file, example raw_binance.txt.
 
 ![Welcome screen](https://github.com/QTinman/CoinBrowser/blob/main/settings.png)
 Typical settings.
