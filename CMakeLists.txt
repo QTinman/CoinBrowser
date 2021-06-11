@@ -24,9 +24,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 #    endif()
 #endif()
 
-find_package(QT NAMES Qt6 Qt5 COMPONENTS Widgets Sql REQUIRED)
+find_package(QT NAMES Qt6 Qt5 COMPONENTS Widgets Sql Network REQUIRED)
 find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets REQUIRED)
 find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Sql REQUIRED)
+find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Network REQUIRED)
 
 
 
@@ -62,3 +63,4 @@ endif()
 
 target_link_libraries(coinbrowser PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
 target_link_libraries(coinbrowser PRIVATE Qt${QT_VERSION_MAJOR}::Sql)
+target_link_libraries(coinbrowser PRIVATE Qt${QT_VERSION_MAJOR}::Network)

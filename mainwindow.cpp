@@ -123,6 +123,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     QStringList modellist = initializemodel();
     //QModelIndex index;
+    manager = new QNetworkAccessManager(this);
+    connect(manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(replyFinished(QNetworkReply*)));
     model = new QStandardItemModel(modellist.length()/colums,colums,this);
     connect(ui->search,SIGNAL(textEdited(const QString &)),this,SLOT(searchmodel(const QString&)));
     loadtimer();
@@ -539,7 +541,20 @@ QStringList MainWindow::initializemodel()
         csv_file.close();
         create_db = false;
         if (((ct >= jsondt && autoupdatejson) || ui->actionUpdateJson->isChecked()) && !apikey.isEmpty()) {
-            QString path = loadsettings("json_path").toString();
+
+            QString crypto=crypt;
+            ui->actionUpdateJson->setChecked(false);
+            if (crypto.contains("USD")) crypto="USD";
+            QString query = QString("start=1&limit=5000&convert=USD");
+            QUrl url = QUrl(QString("https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?%1").arg(query));
+            QNetworkRequest request(url);
+            request.setRawHeader("Accept", "application/json");
+            request.setRawHeader("X-CMC_PRO_API_KEY", apikey.toUtf8());
+            manager->get(request);
+
+
+
+           /* QString path = loadsettings("json_path").toString();
             if (path == "") path = ".";
             QString crypto=crypt;
             ui->actionUpdateJson->setChecked(false);
@@ -557,7 +572,7 @@ QStringList MainWindow::initializemodel()
             myProcess->setStandardOutputFile(path+"/crypto_"+crypt+".json");
             myProcess->start("curl",commandlist);
             if (myProcess->exitCode() > 0) ui->messages->setText("Error executing cURL : " + myProcess->errorString() + " Exitcode: " + QString::number(myProcess->exitCode()));
-            myProcess->waitForFinished(-1);
+            myProcess->waitForFinished(-1);*/
         } else if (apikey.isEmpty()) ui->messages->setText("API key missing, please insert API key in settings.");
         if (pairs.count() > 0 && jsonArray.count() > 0 && !apikey.isEmpty()) ui->messages->setText(ui->messages->text()+", Found and added to list "+QString::number(coininlist) + " / Winner: " + top_symbol + "  " + QString::number(top_1h) + "% / Looser: " + bottom_symbol + "  " + QString::number(bottom_1h)+"%");
         return modeldatalist;
@@ -723,4 +738,35 @@ void MainWindow::on_tables_activated(int index)
     dbtable=ui->tables->currentText();
     initializeModel(sqlmodel);
     reload_model();
+}
+
+void MainWindow::replyFinished (QNetworkReply *reply)
+{
+    if(reply->error())
+    {
+        ui->messages->setText("ERROR! "+reply->errorString());
+
+    }
+    else
+    {
+        //ui->transferLog->appendPlainText(reply->header(QNetworkRequest::ContentTypeHeader).toString());
+        //ui->transferLog->appendPlainText(reply->header(QNetworkRequest::LastModifiedHeader).toDateTime().toString());
+        //ui->transferLog->appendPlainText(reply->header(QNetworkRequest::ContentLengthHeader).toString());
+        //ui->transferLog->appendPlainText(reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toString());
+        //ui->transferLog->appendPlainText(reply->attribute(QNetworkRequest::HttpReasonPhraseAttribute).toString());
+        //ui->transferLog->appendPlainText("OK");
+        QString path = loadsettings("json_path").toString();
+        if (path == "") path = ".";
+        QFile *file = new QFile(path+"/crypto_"+crypt+".json");
+        if(file->open(QFile::WriteOnly))
+        {
+            file->write(reply->readAll());
+            file->flush();
+            file->close();
+        }
+        delete file;
+        reload_model();
+    }
+
+    reply->deleteLater();
 }

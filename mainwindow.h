@@ -9,6 +9,10 @@
 #include <QtSql/QSqlQuery>
 #include <QtSql/QSqlError>
 #include <QtSql/QSqlDatabase>
+#include <QNetworkAccessManager>
+#include <QNetworkRequest>
+#include <QNetworkReply>
+#include <QUrl>
 
 extern QSqlDatabase db;
 extern QString exchange, appgroup,crypt;
@@ -47,12 +51,13 @@ private slots:
     void on_actionUpdateDB_changed();
     void calc_profit();
     void on_actionUpdateJson_changed();
-
+    void replyFinished (QNetworkReply *reply);
     void on_tables_activated(int index);
 
 private:
     Ui::MainWindow *ui;
     QSqlTableModel * sqlmodel;
     QStandardItemModel *model;
+    QNetworkAccessManager *manager;
 };
 #endif // MAINWINDOW_H
