@@ -13,7 +13,6 @@ Database can then be selected from droppdown in mainwindow.
 ![Welcome screen](https://github.com/QTinman/CoinBrowser/blob/main/screencap.png)
 
 
-About files
 The txt files starting with raw_ in the name is created with command "docker-compose run --rm freqtrade list-pairs --exchange binance" and the table from the output copied to file, example raw_binance.txt.
 
 ![Welcome screen](https://github.com/QTinman/CoinBrowser/blob/main/settings.png)
