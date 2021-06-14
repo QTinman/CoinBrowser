@@ -194,7 +194,7 @@
      <item>
       <widget class="QSpinBox" name="rowsintable">
        <property name="maximum">
-        <number>999</number>
+        <number>9999</number>
        </property>
       </widget>
      </item>

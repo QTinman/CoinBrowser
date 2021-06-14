@@ -17,7 +17,6 @@ settingsDialog::settingsDialog(QWidget *parent) :
     ui(new Ui::settingsDialog)
 {
     ui->setupUi(this);
-    //MainWindow main;
     int index=0;
     QStringList blacklist,cryptolist,profilelist;
     QStringList exchanges={"Binance","Bittrex","Kraken","FTX"}, maincoins={"BTC","ETH","USDT"};

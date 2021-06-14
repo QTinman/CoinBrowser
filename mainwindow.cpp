@@ -12,7 +12,7 @@ QString crypt="BTC";
 QString exchange,dbfile="coinhistory.db",dbtable="";
 QSqlDatabase db;
 QTimer *timer;
-int colums=10,maxcoins=0,addsec=1800;
+int colums=10,coin_from=1,coin_to=1,addsec=1800;
 QString appgroup="coinbrowser";
 double from1h=-2,to1h=5,from24h=0,to24h=100,from7d=-2,to7d=100,btc_price=58338,markedcap_percent,volume_percent_min,volume_percent_max,price_change_from,price_change_to,volum_min,pricemin,pricemax;
 bool change_1h,change_24h,change_7d,volume,marked_cap,use_volume,show_only_blacklisted,change_price,create_db=false,pricefilter,volume_min_check;
@@ -33,7 +33,7 @@ QJsonArray MainWindow::ReadJson(const QString &path)
 
         QJsonObject jsonObject = cryptolist.object();
         jsonArray = jsonObject["data"].toArray();
-        if ((ui->maxcoins->text() == "" || maxcoins == 0) || maxcoins > jsonArray.count()) ui->maxcoins->setText(QString::number(jsonArray.count()));
+        if ((ui->cointo->value() == 0 || coin_to == 0) || coin_to > jsonArray.count()) ui->cointo->setValue(jsonArray.count());
         //qDebug() << "Number of cryptocurrencies " << jsonArray.count();
 
     }
@@ -69,7 +69,10 @@ MainWindow::MainWindow(QWidget *parent)
     price_change_to = loadsettings("price_change_to").toDouble();
     pricemin = loadsettings("pricemin").toDouble();
     pricemax = loadsettings("pricemax").toDouble();
-    maxcoins = loadsettings("maxcoins").toInt();
+    coin_from = loadsettings("coinfrom").toInt();
+    coin_to = loadsettings("cointo").toInt();
+    ui->cointo->setValue(coin_to);
+    ui->coinfrom->setValue(coin_from);
     markedcap_percent = loadsettings("markedcap_percent").toDouble();
     volume_percent_min = loadsettings("volume_percent_min").toDouble();
     volume_percent_max = loadsettings("volume_percent_max").toDouble();
@@ -156,9 +159,8 @@ MainWindow::~MainWindow()
     db.close();
 
     savesettings("position",this->geometry());
-    if (ui->maxcoins->text() != "")
-        savesettings("maxcoins",ui->maxcoins->text());
-    else savesettings("maxcoins",QString::number(maxcoins));
+    savesettings("cointo",coin_to);
+    savesettings("coinfrom",coin_from);
     savesettings("change_1h",change_1h);
     savesettings("change_24h",change_24h);
     savesettings("change_7d",change_7d);
@@ -384,16 +386,16 @@ QStringList MainWindow::initializemodel()
             ui->actionUpdateDB->setChecked(false);
             createdb();
         }
+        coin_to = ui->cointo->value();
+        coin_from = ui->coinfrom->value();
 
         btc_price = loadsettings(exchange.toLower()+"_stake_coin_price").toDouble();
-        if (ui->maxcoins->text() == "") ui->maxcoins->setText(QString::number(maxcoins));
-        else maxcoins = ui->maxcoins->text().toInt();
-
         QJsonArray jsonArray = ReadJson(path+"/crypto_"+crypt+".json");
 
         foreach (const QJsonValue & value, jsonArray) {
 
                 QJsonObject data = value.toObject();
+
                 int id = data["cmc_rank"].toInt();
                 QString lastsymbol=symbol;
                 symbol = data["symbol"].toString();
@@ -512,7 +514,7 @@ QStringList MainWindow::initializemodel()
 
                 for ( const auto& i : pairs  ) //Write to tableview
                 {
-                    if ((priceok && weekplus && dayplus && hourplus && volumeok && volummin && i==symbol && inrank && marked_cap_ok && unique<2 && priceplus) || (!ui->filter->isChecked() && i==symbol && unique<2)) {
+                    if ((priceok && weekplus && dayplus && hourplus && volumeok && volummin && i==symbol && inrank && marked_cap_ok && unique<2 && priceplus && coin_from <= coincounts) || (!ui->filter->isChecked() && i==symbol && unique<2 && coin_from <= coincounts)) {
                         modeldatalist << QString::number(id) << symbol << name << QString::number(price, 'F', 3) << QString::number(price_change, 'F', 2) << QString::number(volume_24h, 'F', 2) << QString::number(percent_change_1h, 'F', 2) << QString::number(percent_change_24h, 'F', 2) << QString::number(percent_change_7d, 'F', 2) << last_updated_time;
                         if (report) {
                             csv_string=name+","+QString::number(volume_24h)+","+QString::number(db_volume_24h)+","+QString::number(percent_change_1h)+","+QString::number(db_percent_change_1h)+","+last_updated+","+db_last_updated+","+cd.toString()+","+ct.toString();
@@ -532,7 +534,7 @@ QStringList MainWindow::initializemodel()
                 unique = 0;
                 marked_cap_ok = false;
                 coincounts++;
-                if ((maxcoins <= coincounts && !ui->actionUpdateJson->isChecked()) || (ui->actionUpdateJson->isChecked() && rowsintable <= coincounts)) break;
+                if ((coin_to <= coincounts && !ui->actionUpdateJson->isChecked()) || (ui->actionUpdateJson->isChecked() && rowsintable <= coincounts)) break;
 
 
         }
@@ -545,7 +547,7 @@ QStringList MainWindow::initializemodel()
             QString crypto=crypt;
             ui->actionUpdateJson->setChecked(false);
             if (crypto.contains("USD")) crypto="USD";
-            QString query = QString("start=1&limit=5000&convert=USD");
+            QString query = QString("start=1&limit=5000&convert="+crypto);
             QUrl url = QUrl(QString("https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?%1").arg(query));
             QNetworkRequest request(url);
             request.setRawHeader("Accept", "application/json");
@@ -673,6 +675,7 @@ void MainWindow::reload_model()
         }
       row++;
     }
+    loadtimer();
 }
 
 
