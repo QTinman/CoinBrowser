@@ -12,7 +12,7 @@ QString crypt="BTC";
 QString exchange,dbfile="coinhistory.db",dbtable="";
 QSqlDatabase db;
 QTimer *timer;
-int colums=10,coin_from=1,coin_to=1,addsec=1800;
+int colums=11,coin_from=1,coin_to=1,addsec=1800,cycles=0;
 QString appgroup="coinbrowser";
 double from1h=-2,to1h=5,from24h=0,to24h=100,from7d=-2,to7d=100,btc_price=58338,markedcap_percent,volume_percent_min,volume_percent_max,price_change_from,price_change_to,volum_min,pricemin,pricemax;
 bool change_1h,change_24h,change_7d,volume,marked_cap,use_volume,show_only_blacklisted,change_price,create_db=false,pricefilter,volume_min_check;
@@ -49,6 +49,17 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
     //calc_profit();
     timer = new QTimer(this);
+    manager = new QNetworkAccessManager(this);
+    bool autoupdatejson=loadsettings("autoupdatejson").toBool();
+    int autojsonmin=loadsettings("autojsonmin").toInt();
+    if (autojsonmin == 0) autojsonmin=60;
+    //qDebug() << autojsonmin << " " << autoupdatejson << " " << timer->interval() << " " << timer->isActive() << " " << timer->isSingleShot() << " " << timer->interval();
+    if (!timer->isActive()) {
+        connect(timer, SIGNAL(timeout()), this, SLOT(reload_model()));
+        if (autoupdatejson) timer->start(autojsonmin*60000);
+    }
+    QTime ct=QTime::currentTime().addMSecs(timer->remainingTime());
+    qDebug() << autojsonmin << " " << autoupdatejson << " " << timer->interval() << " " << timer->isActive() << " " << timer->isSingleShot() << " " << ct.toString();
     setGeometry(loadsettings("position").toRect());
     change_1h = loadsettings("change_1h").toBool();
     change_24h = loadsettings("change_24h").toBool();
@@ -126,15 +137,13 @@ MainWindow::MainWindow(QWidget *parent)
 
     QStringList modellist = initializemodel();
     //QModelIndex index;
-    manager = new QNetworkAccessManager(this);
+
     connect(manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(replyFinished(QNetworkReply*)));
     model = new QStandardItemModel(modellist.length()/colums,colums,this);
     connect(ui->search,SIGNAL(textEdited(const QString &)),this,SLOT(searchmodel(const QString&)));
-    loadtimer();
-
     reload_model();
 
-    model->setHeaderData(0, Qt::Horizontal, "Id", Qt::DisplayRole);
+    model->setHeaderData(0, Qt::Horizontal, "Rank", Qt::DisplayRole);
     model->setHeaderData(1, Qt::Horizontal, "Symbol", Qt::DisplayRole);
     model->setHeaderData(2, Qt::Horizontal, "Name", Qt::DisplayRole);
     model->setHeaderData(3, Qt::Horizontal, "Price "+crypt, Qt::DisplayRole);
@@ -143,7 +152,8 @@ MainWindow::MainWindow(QWidget *parent)
     model->setHeaderData(6, Qt::Horizontal, "1h change", Qt::DisplayRole);
     model->setHeaderData(7, Qt::Horizontal, "24h change", Qt::DisplayRole);
     model->setHeaderData(8, Qt::Horizontal, "7d change", Qt::DisplayRole);
-    model->setHeaderData(9, Qt::Horizontal, "db/json time", Qt::DisplayRole);
+    model->setHeaderData(9, Qt::Horizontal, "DB rank move", Qt::DisplayRole);
+    model->setHeaderData(10, Qt::Horizontal, "db/json time", Qt::DisplayRole);
     connect(ui->comboBox, QOverload<int>::of(&QComboBox::currentIndexChanged),
             [=](int index){ combo_refresh(index); });
     ui->tableView->setModel(model);
@@ -213,19 +223,6 @@ void MainWindow::initializeModel(QSqlTableModel *sqlmodel)
     sqlmodel->setTable(dbtable);
     sqlmodel->setEditStrategy(QSqlTableModel::OnManualSubmit);
     sqlmodel->select();
-}
-
-void MainWindow::loadtimer()
-{
-    bool autoupdatejson=loadsettings("autoupdatejson").toBool();
-    int autojsonmin=loadsettings("autojsonmin").toInt();
-    if (autojsonmin == 0) autojsonmin=60;
-    if (autoupdatejson) {
-        if (!timer->isActive()) {
-            connect(timer, SIGNAL(timeout()), this, SLOT(reload_model()));
-            timer->start(autojsonmin*60000);
-        }
-    }
 }
 
 void MainWindow::tableage()
@@ -373,16 +370,24 @@ QStringList MainWindow::initializemodel()
         if (path =="") path="./crypto_"+stake+".json";
         int rowsintable = loadsettings("rowsintable").toInt(), top_1h=0, bottom_1h=0;
         QString apikey = loadsettings("apikey").toString(), top_symbol="",bottom_symbol="";
+        QDate autotimercheck = QDate::currentDate();
         bool autoupdatejson=loadsettings("autoupdatejson").toBool();
+        if (autotimercheck == QDate::currentDate()) autoupdatejson=false;
         int autojsonmin = loadsettings("autojsonmin").toInt();
         QFileInfo jsonfileinf(path+"/crypto_"+crypt+".json");
         //QFileInfo dbfileinf(dbfile);
         QDateTime jsondt = jsonfileinf.lastModified().addSecs(autojsonmin*60);
-        if (!jsondt.isValid()) jsondt =QDateTime::currentDateTime();
+        if (jsondt == jsondt) {
+            QDateTime::currentDateTime();
+            qDebug() << jsondt << " " << cd;
+        }
         dbtable=ui->tables->currentText();
-        if ((ct >= jsondt && autoupdatejson) || ui->actionUpdateJson->isChecked()) {
+
+        qDebug() << cycles;
+        if ((ct > jsondt && autoupdatejson) || ui->actionUpdateJson->isChecked()) {
             create_db=true;
-            if (!db.open()) qDebug() << "Error " << db.lastError().text();
+            cycles++;
+            if (!db.open()) qDebug() << "Error: " << db.lastError().text();
             ui->actionUpdateDB->setChecked(false);
             createdb();
         }
@@ -497,6 +502,8 @@ QStringList MainWindow::initializemodel()
                 else if (!change_7d) weekplus=true;
                 if (price < pricemax && price > pricemin && pricefilter) priceok=true;
                 else if (!pricefilter) priceok=true;
+                QString rankmove=QString::number(db_id-id);
+                if (db_id-id == 0) rankmove="-";
                 //if (percent_change_7d < 0) weekplus=true;
                 //weekplus=true;
 
@@ -515,7 +522,7 @@ QStringList MainWindow::initializemodel()
                 for ( const auto& i : pairs  ) //Write to tableview
                 {
                     if ((priceok && weekplus && dayplus && hourplus && volumeok && volummin && i==symbol && inrank && marked_cap_ok && unique<2 && priceplus && coin_from <= coincounts) || (!ui->filter->isChecked() && i==symbol && unique<2 && coin_from <= coincounts)) {
-                        modeldatalist << QString::number(id) << symbol << name << QString::number(price, 'F', 3) << QString::number(price_change, 'F', 2) << QString::number(volume_24h, 'F', 2) << QString::number(percent_change_1h, 'F', 2) << QString::number(percent_change_24h, 'F', 2) << QString::number(percent_change_7d, 'F', 2) << last_updated_time;
+                        modeldatalist << QString::number(id) << symbol << name << QString::number(price, 'F', 3) << QString::number(price_change, 'F', 2) << QString::number(volume_24h, 'F', 2) << QString::number(percent_change_1h, 'F', 2) << QString::number(percent_change_24h, 'F', 2) << QString::number(percent_change_7d, 'F', 2) << QString::number(db_id-id) << last_updated_time;
                         if (report) {
                             csv_string=name+","+QString::number(volume_24h)+","+QString::number(db_volume_24h)+","+QString::number(percent_change_1h)+","+QString::number(db_percent_change_1h)+","+last_updated+","+db_last_updated+","+cd.toString()+","+ct.toString();
                             outStream << csv_string+"\n";
@@ -546,6 +553,7 @@ QStringList MainWindow::initializemodel()
 
             QString crypto=crypt;
             ui->actionUpdateJson->setChecked(false);
+            if (autoupdatejson) autoupdatejson = false;
             if (crypto.contains("USD")) crypto="USD";
             QString query = QString("start=1&limit=5000&convert="+crypto);
             QUrl url = QUrl(QString("https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?%1").arg(query));
@@ -669,13 +677,14 @@ void MainWindow::reload_model()
          if (col == 0) model->setData(index,modellist[i].toInt());
          if (col < 4 & col > 0) model->setData(index,modellist[i]);
          if (col < 9 & col > 2) model->setData(index,modellist[i].toDouble());
-         if (col == 9) model->setData(index,modellist[i]);
+         if (col == 9) model->setData(index,modellist[i].toInt());
+         if (col == 10) model->setData(index,modellist[i]);
          model->setData(index, Qt::AlignCenter, Qt::TextAlignmentRole);
          i++;
         }
       row++;
     }
-    loadtimer();
+   // if (loadsettings("autopudatejson", autoupd)
 }
 
 
@@ -714,7 +723,6 @@ void MainWindow::on_pushButton_3_clicked()
     settingsdialog.exec();
     ui->filter->setChecked(false);
     tableage();
-    loadtimer();
     this->setWindowTitle("Cryptocurrency tool for Freqtrade, active stake coin "+crypt);
 }
 
@@ -768,7 +776,7 @@ void MainWindow::replyFinished (QNetworkReply *reply)
             file->close();
         }
         delete file;
-        reload_model();
+        if (timer->isActive()) reload_model();
     }
 
     reply->deleteLater();

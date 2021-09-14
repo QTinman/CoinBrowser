@@ -15,6 +15,7 @@
 #include <QUrl>
 
 extern QSqlDatabase db;
+extern QTimer *timer;
 extern QString exchange, appgroup,crypt;
 extern double from1h,to1h,from24h,to24h,from7d,to7d,markedcap_percent,volume_percent_min,volume_percent_max,price_change_from,price_change_to,volum_min,pricemin,pricemax;
 extern bool change_1h,change_24h,change_7d,marked_cap,use_volume,show_only_blacklisted,change_price,createdb,pricefilter,volume_min_check;
@@ -47,7 +48,6 @@ private slots:
     void on_pushButton_2_clicked();
     void tableage();
     void on_pushButton_3_clicked();
-    void loadtimer();
     void on_actionUpdateDB_changed();
     void calc_profit();
     void on_actionUpdateJson_changed();

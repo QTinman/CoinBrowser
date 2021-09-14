@@ -11,6 +11,8 @@
 #include <QUrl>
 #include <QtWidgets>
 
+bool timeractive;
+int timerinteval;
 
 settingsDialog::settingsDialog(QWidget *parent) :
     QDialog(parent),
@@ -56,6 +58,8 @@ settingsDialog::settingsDialog(QWidget *parent) :
     QString apikey = loadsettings("apikey").toString();
     ui->apikey->setText(apikey);
     bool autoupdatejson=loadsettings("autoupdatejson").toBool();
+    timeractive=autoupdatejson;
+
     ui->autoupdatejson->setChecked(autoupdatejson);
     int tableage = loadsettings("tableage").toInt();
     if (tableage == 0) {
@@ -68,6 +72,7 @@ settingsDialog::settingsDialog(QWidget *parent) :
         ui->autojsonmin->setValue(240);
         autojsonmin = 240;
     } else ui->autojsonmin->setValue(autojsonmin);
+    timerinteval=autojsonmin;
     int rowsintable = loadsettings("rowsintable").toInt();
     ui->rowsintable->setValue(rowsintable);
     if (rowsintable == 0) {
@@ -175,7 +180,12 @@ void settingsDialog::on_buttonBox_accepted()
     savesettings("autoupdatejson",ui->autoupdatejson->isChecked());
     savesettings("autojsonmin",ui->autojsonmin->value());
     savesettings("rowsintable",ui->rowsintable->value());
-    //savesettings("updateinterval",ui->updateinterval->value());
+    if ((ui->autoupdatejson->isChecked() && !timeractive) || (timerinteval != ui->autojsonmin->value() && ui->autoupdatejson->isChecked())) {
+        timer->setInterval(ui->autojsonmin->value()*60000);
+        //timer->stop();
+        //timer->start(ui->autojsonmin->value()*60000);
+        qDebug() << timer->remainingTime();
+    }
+    if (!ui->autoupdatejson->isChecked() && timeractive) timer->stop();
     savesettings("tableage",ui->tableage->value());
-    //crypt = ui->maincoins->currentText();
 }
