@@ -10,12 +10,13 @@
 QProcess process;
 QString crypt="BTC";
 QString exchange,dbfile="coinhistory.db",dbtable="";
+QDateTime timeroff;
 QSqlDatabase db;
 QTimer *timer;
 int colums=11,coin_from=1,coin_to=1,addsec=1800,cycles=0;
 QString appgroup="coinbrowser";
 double from1h=-2,to1h=5,from24h=0,to24h=100,from7d=-2,to7d=100,btc_price=58338,markedcap_percent,volume_percent_min,volume_percent_max,price_change_from,price_change_to,volum_min,pricemin,pricemax;
-bool change_1h,change_24h,change_7d,volume,marked_cap,use_volume,show_only_blacklisted,change_price,create_db=false,pricefilter,volume_min_check;
+bool change_1h,change_24h,change_7d,volume,marked_cap,use_volume,show_only_blacklisted,change_price,create_db=false,pricefilter,volume_min_check ,timeupdatedb=false;
 
 
 QJsonArray MainWindow::ReadJson(const QString &path)
@@ -59,6 +60,7 @@ MainWindow::MainWindow(QWidget *parent)
         if (autoupdatejson) timer->start(autojsonmin*60000);
     }
     QTime ct=QTime::currentTime().addMSecs(timer->remainingTime());
+    timeroff=QDateTime::currentDateTime().addMSecs(timer->remainingTime());
     qDebug() << autojsonmin << " " << autoupdatejson << " " << timer->interval() << " " << timer->isActive() << " " << timer->isSingleShot() << " " << ct.toString();
     setGeometry(loadsettings("position").toRect());
     change_1h = loadsettings("change_1h").toBool();
@@ -346,7 +348,7 @@ QStringList MainWindow::initializemodel()
         double percent,price_change;
         int db_id,coincounts=0,coininlist=0,unique=0;
         QDate cd = QDate::currentDate();
-        QDateTime ct = QDateTime::currentDateTime();
+        QDateTime cdt = QDateTime::currentDateTime();
         QSqlRecord record;
         QFile csv_file;
         QString db_symbol,db_name, symbol,db_last_updated,sqlquery="";
@@ -356,7 +358,7 @@ QStringList MainWindow::initializemodel()
         bool report=loadsettings("report").toBool();
         QString csv_string="Name,Volume new,Volume old,1h change,1h change old,Last updated, Old last updated";
         if (report) {
-            QString csv_filename="report_"+exchange+"_"+cd.toString()+"_"+ct.toString()+".csv";
+            QString csv_filename="report_"+exchange+"_"+cd.toString()+"_"+cdt.toString()+".csv";
             QString reportPath = loadsettings("reportpath").toString();
             csv_file.setFileName(reportPath+"/"+csv_filename);
             csv_file.open(QIODevice::WriteOnly | QIODevice::Text);
@@ -370,21 +372,9 @@ QStringList MainWindow::initializemodel()
         if (path =="") path="./crypto_"+stake+".json";
         int rowsintable = loadsettings("rowsintable").toInt(), top_1h=0, bottom_1h=0;
         QString apikey = loadsettings("apikey").toString(), top_symbol="",bottom_symbol="";
-        QDate autotimercheck = QDate::currentDate();
         bool autoupdatejson=loadsettings("autoupdatejson").toBool();
-        if (autotimercheck == QDate::currentDate()) autoupdatejson=false;
-        int autojsonmin = loadsettings("autojsonmin").toInt();
-        QFileInfo jsonfileinf(path+"/crypto_"+crypt+".json");
-        //QFileInfo dbfileinf(dbfile);
-        QDateTime jsondt = jsonfileinf.lastModified().addSecs(autojsonmin*60);
-        if (jsondt == jsondt) {
-            QDateTime::currentDateTime();
-            qDebug() << jsondt << " " << cd;
-        }
         dbtable=ui->tables->currentText();
-
-        qDebug() << cycles;
-        if ((ct > jsondt && autoupdatejson) || ui->actionUpdateJson->isChecked()) {
+        if ((timeupdatedb && autoupdatejson) || ui->actionUpdateJson->isChecked()) {
             create_db=true;
             cycles++;
             if (!db.open()) qDebug() << "Error: " << db.lastError().text();
@@ -440,13 +430,11 @@ QStringList MainWindow::initializemodel()
 
                   }
                 }
-                //if (symbol != db_symbol) qDebug() << symbol << " " << db_symbol;
                 QString last_updated_time = db_last_updated.mid(11,5)+"/"+last_updated.mid(11,5);
                 json_year = last_updated.mid(0,4).toInt();
                 json_mo = last_updated.mid(5,2).toInt();
                 json_date = last_updated.mid(8,2).toInt();
                 json_h = last_updated.mid(11,2).toInt();
-                //json_min = last_updated.mid(14,2).toInt();
 
                 db_year = db_last_updated.mid(0,4).toInt();
                 db_mo = db_last_updated.mid(5,2).toInt();
@@ -504,31 +492,20 @@ QStringList MainWindow::initializemodel()
                 else if (!pricefilter) priceok=true;
                 QString rankmove=QString::number(db_id-id);
                 if (db_id-id == 0) rankmove="-";
-                //if (percent_change_7d < 0) weekplus=true;
-                //weekplus=true;
-
                 for ( const auto& i : pairs  )
                 {
-                    /*if (i == symbol && inrank) { // taka ut tvøfalda
-                        inrank = false;
-                        qDebug() << symbol;
-                    }
-                    else*/
-                        if (i == symbol) inrank = true;
+                    if (i == symbol) inrank = true;
                     if (i == lastsymbol) unique++;
-
                  }
-
                 for ( const auto& i : pairs  ) //Write to tableview
                 {
                     if ((priceok && weekplus && dayplus && hourplus && volumeok && volummin && i==symbol && inrank && marked_cap_ok && unique<2 && priceplus && coin_from <= coincounts) || (!ui->filter->isChecked() && i==symbol && unique<2 && coin_from <= coincounts)) {
                         modeldatalist << QString::number(id) << symbol << name << QString::number(price, 'F', 3) << QString::number(price_change, 'F', 2) << QString::number(volume_24h, 'F', 2) << QString::number(percent_change_1h, 'F', 2) << QString::number(percent_change_24h, 'F', 2) << QString::number(percent_change_7d, 'F', 2) << QString::number(db_id-id) << last_updated_time;
                         if (report) {
-                            csv_string=name+","+QString::number(volume_24h)+","+QString::number(db_volume_24h)+","+QString::number(percent_change_1h)+","+QString::number(db_percent_change_1h)+","+last_updated+","+db_last_updated+","+cd.toString()+","+ct.toString();
+                            csv_string=name+","+QString::number(volume_24h)+","+QString::number(db_volume_24h)+","+QString::number(percent_change_1h)+","+QString::number(db_percent_change_1h)+","+last_updated+","+db_last_updated+","+cd.toString()+","+cdt.toString();
                             outStream << csv_string+"\n";
                         }
                         coininlist++;
-
                     }
                }
                 volumeok = false;
@@ -549,8 +526,8 @@ QStringList MainWindow::initializemodel()
         if (pairs.count() > 0 && jsonArray.count() > 0) ui->messages->setText("Database is from "+QString::number(db_date)+"/"+QString::number(db_mo)+", time "+QString::number(db_h,'G',2)+":"+QString::number(db_min).rightJustified(2,'0'));
         csv_file.close();
         create_db = false;
-        if (((ct >= jsondt && autoupdatejson) || ui->actionUpdateJson->isChecked()) && !apikey.isEmpty()) {
-
+        if (((timeupdatedb && autoupdatejson) || ui->actionUpdateJson->isChecked()) && !apikey.isEmpty()) {
+            timeupdatedb=false;
             QString crypto=crypt;
             ui->actionUpdateJson->setChecked(false);
             if (autoupdatejson) autoupdatejson = false;
@@ -561,28 +538,6 @@ QStringList MainWindow::initializemodel()
             request.setRawHeader("Accept", "application/json");
             request.setRawHeader("X-CMC_PRO_API_KEY", apikey.toUtf8());
             manager->get(request);
-
-
-
-           /* QString path = loadsettings("json_path").toString();
-            if (path == "") path = ".";
-            QString crypto=crypt;
-            ui->actionUpdateJson->setChecked(false);
-            if (crypto.contains("USD")) crypto="USD";
-            QStringList commandlist;
-            commandlist.append("-H");
-            commandlist.append("X-CMC_PRO_API_KEY: "+apikey); //");
-            commandlist.append("-H");
-            commandlist.append("Accept: application/json");
-            commandlist.append("-d");
-            commandlist.append("start=1&limit=5000&convert="+crypto);
-            commandlist.append("-G");
-            commandlist.append("https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest");
-            QProcess *myProcess = new QProcess(this);
-            myProcess->setStandardOutputFile(path+"/crypto_"+crypt+".json");
-            myProcess->start("curl",commandlist);
-            if (myProcess->exitCode() > 0) ui->messages->setText("Error executing cURL : " + myProcess->errorString() + " Exitcode: " + QString::number(myProcess->exitCode()));
-            myProcess->waitForFinished(-1);*/
         } else if (apikey.isEmpty()) ui->messages->setText("API key missing, please insert API key in settings.");
         if (pairs.count() > 0 && jsonArray.count() > 0 && !apikey.isEmpty()) ui->messages->setText(ui->messages->text()+", Found and added to list "+QString::number(coininlist) + " / Winner: " + top_symbol + "  " + QString::number(top_1h) + "% / Looser: " + bottom_symbol + "  " + QString::number(bottom_1h)+"%");
         return modeldatalist;
@@ -669,6 +624,11 @@ void MainWindow::reload_model()
 {
     int row=0,i=0,col;
     QModelIndex index;
+    QDateTime cdt=QDateTime::currentDateTime();
+    if (timeroff <= cdt) {
+        timeupdatedb=true;
+        timeroff=QDateTime::currentDateTime().addMSecs(timer->remainingTime());
+    }
     QStringList modellist = initializemodel();
     model->setRowCount(modellist.length()/colums);
     while (i < modellist.length()-1) {
