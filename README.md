@@ -15,6 +15,7 @@ Database can then be selected from droppdown in mainwindow.
 
 The txt files starting with "raw_" is created with command "docker-compose run --rm freqtrade list-pairs --exchange binance" and the table from the output copied to new file, example raw_binance.txt.
 
+Invest simulator lets you do fictional crypto buys.
 ![Welcome screen](https://github.com/QTinman/CoinBrowser/blob/main/simulator.png)
 
 Crypto invest simulator
