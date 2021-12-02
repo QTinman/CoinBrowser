@@ -9,8 +9,8 @@
 #include <QtSql>
 #include <QMessageBox>
 #include <QGuiApplication>
-#include <QtQml/QQmlFileSelector>
-#include <QQuickView>
+#include <QAbstractButton>
+#include <QPushButton>
 
 
 QProcess process;
@@ -754,25 +754,20 @@ void MainWindow::on_settingsButton_clicked()
 
 void MainWindow::on_stocksButton_clicked()
 {
-    /*QMessageBox msgBox;
-    QClipboard *clipboard=0;
-    msgBox.setWindowTitle("Donate!");
-    msgBox.setText("If you find this program useful please donate to.\nPaypal to jonssofh@hotmail.com\nBTC 1HJ5xJmePkfrYwixbZJaMUcXosiJhYRLbo\nDOT 12XHN5kYhSfCUdwiEAKMkW87L2kKV2AjerLMQukHJ4CnmKbL\nXRP rGzJmHraBUCWpncm3DGdscmAsuy3rDin4R\nADA addr1q9h424fgyqw3y0zer34myqn9lyr303nxcyvzttk8nyqmr7r0242jsgqazg79j8rtkgpxt7g8zlrxdsgcykhv0xgpk8uqh49hnw\nVET 0x136349A99A5a56617e7E7AdbE8c55a0712B0068F\nSupport is most appreciated.");
-    msgBox.exec();
-    if (qEnvironmentVariableIsEmpty("QML_XHR_ALLOW_FILE_READ"))
-        qputenv("QML_XHR_ALLOW_FILE_READ", "1");
-    QQuickView view;
-    view.connect(view.engine(), &QQmlEngine::quit, &msgBox, &QCoreApplication::quit);
-    view.setSource(QUrl("qrc:/demos/stocqt/stocqt.qml"));
-    if (view.status() == QQuickView::Error)
-        ui->messages->setText("Error showing records.");
-    view.setResizeMode(QQuickView::SizeRootObjectToView);
-    view.show();*/
-    //stocks();
-
-
     stocksDialog stocksdialog;
     stocksdialog.setModal(true); // if nomodal is needed then create pointer inputdialog *datesearch; in mainwindow.h private section, then here use inputdialog = new datesearch(this); datesearch.show();
     stocksdialog.exec();
 }
 
+void MainWindow::on_coffee_clicked()
+{
+    QMessageBox msgBox;
+    QClipboard *clipboard=0;
+    msgBox.setWindowTitle("Coffee");
+    msgBox.setText("A coffee for creator \nBTC 1HJ5xJmePkfrYwixbZJaMUcXosiJhYRLbo\nETH/USDT 0x425c98102c43cd4d8e052Fd239B016dCb6CDa597\nAppreciated");
+    QAbstractButton* pButtonYes = msgBox.addButton("Copy to clipboard", QMessageBox::YesRole);
+    msgBox.exec();
+    if (msgBox.clickedButton()==pButtonYes) {
+        clipboard->setText("A coffee for creator \nBTC 1HJ5xJmePkfrYwixbZJaMUcXosiJhYRLbo\nETH/USDT 0x425c98102c43cd4d8e052Fd239B016dCb6CDa597\nAppreciated");
+    }
+}

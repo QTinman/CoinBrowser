@@ -60,6 +60,8 @@ private slots:
 
     void on_stocksButton_clicked();
 
+    void on_coffee_clicked();
+
 private:
     Ui::MainWindow *ui;
     QSqlTableModel * sqlmodel;

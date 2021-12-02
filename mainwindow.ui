@@ -193,9 +193,26 @@
         </item>
         <item>
          <widget class="QToolButton" name="settingsButton">
+          <property name="toolTip">
+           <string>Settings</string>
+          </property>
           <property name="icon">
            <iconset resource="resources.qrc">
             <normaloff>:/new/icon/icons/settings.png</normaloff>:/new/icon/icons/settings.png</iconset>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QToolButton" name="coffee">
+          <property name="toolTip">
+           <string>Coffee for creator</string>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+          <property name="icon">
+           <iconset resource="resources.qrc">
+            <normaloff>:/new/icon/icons/coffeecup.png</normaloff>:/new/icon/icons/coffeecup.png</iconset>
           </property>
          </widget>
         </item>
