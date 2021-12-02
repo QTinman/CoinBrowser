@@ -17,7 +17,7 @@ stocksDialog::stocksDialog(QWidget *parent) :
 
     ui->setupUi(this);
     setGeometry(loadsettings("stockPosition").toRect());
-    ui->balance->setText(loadsettings("balance").toString());
+    ui->balance->setText("$"+loadsettings("balance").toString());
     if (!db.open()) qDebug() << "Error " << db.lastError().text();
     if (!db.tables().contains(table)) createTable(table);
     manager = new QNetworkAccessManager(this);
@@ -35,10 +35,10 @@ stocksDialog::stocksDialog(QWidget *parent) :
     load_model();
 
     model->setHeaderData(0, Qt::Horizontal, "Symbol", Qt::DisplayRole);
-    model->setHeaderData(1, Qt::Horizontal, "Date", Qt::DisplayRole);
-    model->setHeaderData(2, Qt::Horizontal, "Price", Qt::DisplayRole);
+    model->setHeaderData(1, Qt::Horizontal, "Buy date", Qt::DisplayRole);
+    model->setHeaderData(2, Qt::Horizontal, "Buy price", Qt::DisplayRole);
     model->setHeaderData(3, Qt::Horizontal, "Amount", Qt::DisplayRole);
-    model->setHeaderData(4, Qt::Horizontal, "Price today", Qt::DisplayRole);
+    model->setHeaderData(4, Qt::Horizontal, "Current price", Qt::DisplayRole);
     model->setHeaderData(5, Qt::Horizontal, "Proffit", Qt::DisplayRole);
     connect(ui->crypto, QOverload<int>::of(&QComboBox::currentIndexChanged),
             [=](int index){ combo_refresh(index); });
@@ -213,7 +213,7 @@ QStringList stocksDialog::initializemodel()
         }
       }
     }
-    ui->proffit->setText(QString::number(totalproffit, 'F', 3));
+    ui->proffit->setText("$"+QString::number(totalproffit, 'F', 3));
     return modeldatalist;
 }
 
@@ -299,7 +299,7 @@ void stocksDialog::on_buyCrypto_clicked()
         if (q.next()) {
         id= q.value(0).toInt();
         }
-        qDebug() << id << " " << usd << " " << balance;
+        //qDebug() << id << " " << usd << " " << balance;
         if (usd>balance.toInt()) qDebug() << "Error, not enough balance";
         else {
             QString sqlquery;
@@ -371,11 +371,12 @@ void stocksDialog::on_getCurrentPrices_clicked()
             double proffit=(closePrice-db_buyPrice)*db_amount;
             totalproffit+=proffit;
             QSqlQuery query;
+            //qDebug() << db_symbol;
             query.exec("UPDATE "+table+" SET currentPrice = "+QString::number(closePrice)+" WHERE id = "+QString::number(db_id));
 
         }
       }
-      ui->proffit->setText(QString::number(totalproffit, 'F', 3));
+      ui->proffit->setText("$"+QString::number(totalproffit, 'F', 3));
       load_model();
     }
 }
