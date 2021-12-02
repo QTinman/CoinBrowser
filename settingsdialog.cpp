@@ -21,7 +21,7 @@ settingsDialog::settingsDialog(QWidget *parent) :
     ui->setupUi(this);
     int index=0;
     QStringList blacklist,cryptolist,profilelist;
-    QStringList exchanges={"Binance","Bittrex","Kraken","FTX"}, maincoins={"BTC","ETH","USDT"};
+    QStringList exchanges={"Binance","Bittrex","Kraken","FTX","Kucoin"}, maincoins={"BTC","ETH","USDT"};
     ui->exchanges->clear();
     ui->exchanges->addItems(exchanges);
 
@@ -59,7 +59,8 @@ settingsDialog::settingsDialog(QWidget *parent) :
     ui->apikey->setText(apikey);
     bool autoupdatejson=loadsettings("autoupdatejson").toBool();
     timeractive=autoupdatejson;
-
+    ui->cryptoInvestFile->setText(loadsettings("cryptoInvestFile").toString());
+    ui->balance->setValue(loadsettings("balance").toInt());
     ui->autoupdatejson->setChecked(autoupdatejson);
     int tableage = loadsettings("tableage").toInt();
     if (tableage == 0) {
@@ -180,6 +181,8 @@ void settingsDialog::on_buttonBox_accepted()
     savesettings("autoupdatejson",ui->autoupdatejson->isChecked());
     savesettings("autojsonmin",ui->autojsonmin->value());
     savesettings("rowsintable",ui->rowsintable->value());
+    savesettings("cryptoInvestFile",ui->cryptoInvestFile->text());
+    savesettings("balance",ui->balance->value());
     if ((ui->autoupdatejson->isChecked() && !timeractive) || (timerinteval != ui->autojsonmin->value() && ui->autoupdatejson->isChecked())) {
         timer->setInterval(ui->autojsonmin->value()*60000);
         //timer->stop();
@@ -189,3 +192,10 @@ void settingsDialog::on_buttonBox_accepted()
     if (!ui->autoupdatejson->isChecked() && timeractive) timer->stop();
     savesettings("tableage",ui->tableage->value());
 }
+
+void settingsDialog::on_cryptoInvestPath_clicked()
+{
+    QString cryptoInvestPath = QFileDialog::getOpenFileName(this,"Select file exported by CoinBrowser",".");
+    ui->cryptoInvestFile->setText(cryptoInvestPath);
+}
+

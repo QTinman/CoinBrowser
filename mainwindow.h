@@ -13,6 +13,7 @@
 #include <QNetworkRequest>
 #include <QNetworkReply>
 #include <QUrl>
+#include <QtQml/QQmlEngine>
 
 extern QSqlDatabase db;
 extern QTimer *timer;
@@ -41,18 +42,23 @@ public:
     ~MainWindow();
 
 private slots:
-    void on_pushButton_clicked();
     void searchmodel(const QString&);
     void on_filter_clicked();
     void reload_model();
-    void on_pushButton_2_clicked();
     void tableage();
-    void on_pushButton_3_clicked();
     void on_actionUpdateDB_changed();
     void calc_profit();
     void on_actionUpdateJson_changed();
     void replyFinished (QNetworkReply *reply);
     void on_tables_activated(int index);
+
+    void on_fileButton_clicked();
+
+    void on_filterButton_clicked();
+
+    void on_settingsButton_clicked();
+
+    void on_stocksButton_clicked();
 
 private:
     Ui::MainWindow *ui;

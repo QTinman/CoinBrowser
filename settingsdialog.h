@@ -34,6 +34,8 @@ private slots:
 
     void on_buttonBox_accepted();
 
+    void on_cryptoInvestPath_clicked();
+
 private:
     Ui::settingsDialog *ui;
 };

@@ -2,9 +2,15 @@
 #include "./ui_mainwindow.h"
 #include "coinfilterdialog.h"
 #include "settingsdialog.h"
+#include "stocksdialog.h"
+#include "stocks.h"
 #include <QtCore>
 #include <QtGui>
 #include <QtSql>
+#include <QMessageBox>
+#include <QGuiApplication>
+#include <QtQml/QQmlFileSelector>
+#include <QQuickView>
 
 
 QProcess process;
@@ -61,7 +67,7 @@ MainWindow::MainWindow(QWidget *parent)
     }
     QTime ct=QTime::currentTime().addMSecs(timer->remainingTime());
     timeroff=QDateTime::currentDateTime().addMSecs(timer->remainingTime());
-    qDebug() << autojsonmin << " " << autoupdatejson << " " << timer->interval() << " " << timer->isActive() << " " << timer->isSingleShot() << " " << ct.toString();
+    //qDebug() << autojsonmin << " " << autoupdatejson << " " << timer->interval() << " " << timer->isActive() << " " << timer->isSingleShot() << " " << ct.toString();
     setGeometry(loadsettings("position").toRect());
     change_1h = loadsettings("change_1h").toBool();
     change_24h = loadsettings("change_24h").toBool();
@@ -91,7 +97,7 @@ MainWindow::MainWindow(QWidget *parent)
     volume_percent_max = loadsettings("volume_percent_max").toDouble();
     volum_min  = loadsettings("volum_min").toDouble();
     volume_min_check  = loadsettings("volum_min_check").toBool();
-    QStringList exchanges={"Binance","Bittrex","Kraken","FTX"};
+    QStringList exchanges={"Binance","Bittrex","Kraken","FTX","Kucoin"};
     QString pwd = QDir::currentPath();
     QString json_path = loadsettings("json_path").toString();
     if (json_path == "") savesettings("json_path",pwd);
@@ -560,38 +566,6 @@ void MainWindow::combo_refresh(int comboindex)
     reload_model();
 }
 
-void MainWindow::on_pushButton_clicked()
-{
-    QFile fileout;
-    int row=0,col=1,rows=model->rowCount();
-    QTextStream out(&fileout);
-    QStringList pairs;
-    bool doub=false;
-    QModelIndex index=model->index(row,col,QModelIndex());
-    QString cryptolistwrite = loadsettings("cryptolistwrite").toString();
-    if (cryptolistwrite == "") cryptolistwrite="./";
-    else cryptolistwrite = cryptolistwrite+"/";
-    fileout.setFileName(cryptolistwrite+crypt.toLower()+"_"+exchange.toLower()+".txt");
-
-    if (!fileout.open(QIODevice::WriteOnly | QIODevice::Text))
-        qDebug() << "Error opening file!";
-
-    while (model->data(index.sibling(index.row(),col)).toString() != "")
-    {
-        for ( const auto& i : pairs  ) if (i==model->data(index.sibling(index.row(),col)).toString()) doub = true;
-        pairs << model->data(index.sibling(index.row(),col)).toString();
-
-        if (row==rows-1 && !doub)
-            out << "\t\t\t\"" << model->data(index.sibling(index.row(),col)).toString() << "/" << crypt <<"\"\n";
-        else if (!doub)
-            out << "\t\t\t\"" << model->data(index.sibling(index.row(),col)).toString() << "/" << crypt <<"\",\n";
-        row++;
-        doub=false;
-        index=model->index(row,0,QModelIndex());
-    }
-    ui->messages->setText("Pairs written to file -> "+cryptolistwrite+crypt.toLower()+"_"+exchange.toLower()+".txt");
-    fileout.close();
-}
 
 void MainWindow::on_filter_clicked()
 {
@@ -648,16 +622,6 @@ void MainWindow::reload_model()
 }
 
 
-void MainWindow::on_pushButton_2_clicked()
-{
-
-    coinfilterDialog coinfilter;
-    QObject::connect(&coinfilter, SIGNAL(destroyed()), this, SLOT(reload_model()));
-    coinfilter.setModal(true); // if nomodal is needed then create pointer inputdialog *datesearch; in mainwindow.h private section, then here use inputdialog = new datesearch(this); datesearch.show();
-    coinfilter.exec();
-}
-
-
 void MainWindow::calc_profit()
 {
     //Adds daily profit to totalsum and calculate a new day.
@@ -673,17 +637,6 @@ void MainWindow::calc_profit()
         //start = start+dailyprofit;
     }
     //((490−350) ÷350)×100
-}
-
-void MainWindow::on_pushButton_3_clicked()
-{
-    settingsDialog settingsdialog;
-    QObject::connect(&settingsdialog, SIGNAL(destroyed()), this, SLOT(reload_model()));
-    settingsdialog.setModal(true); // if nomodal is needed then create pointer inputdialog *datesearch; in mainwindow.h private section, then here use inputdialog = new datesearch(this); datesearch.show();
-    settingsdialog.exec();
-    ui->filter->setChecked(false);
-    tableage();
-    this->setWindowTitle("Cryptocurrency tool for Freqtrade, active stake coin "+crypt);
 }
 
 void MainWindow::on_actionUpdateDB_changed()
@@ -741,3 +694,85 @@ void MainWindow::replyFinished (QNetworkReply *reply)
 
     reply->deleteLater();
 }
+
+
+
+void MainWindow::on_fileButton_clicked()
+{
+    QFile fileout;
+    int row=0,col=1,rows=model->rowCount();
+    QTextStream out(&fileout);
+    QStringList pairs;
+    bool doub=false;
+    QModelIndex index=model->index(row,col,QModelIndex());
+    QString cryptolistwrite = loadsettings("cryptolistwrite").toString();
+    if (cryptolistwrite == "") cryptolistwrite="./";
+    else cryptolistwrite = cryptolistwrite+"/";
+    fileout.setFileName(cryptolistwrite+crypt.toLower()+"_"+exchange.toLower()+".txt");
+
+    if (!fileout.open(QIODevice::WriteOnly | QIODevice::Text))
+        qDebug() << "Error opening file!";
+
+    while (model->data(index.sibling(index.row(),col)).toString() != "")
+    {
+        for ( const auto& i : pairs  ) if (i==model->data(index.sibling(index.row(),col)).toString()) doub = true;
+        pairs << model->data(index.sibling(index.row(),col)).toString();
+
+        if (row==rows-1 && !doub)
+            out << "\t\t\t\"" << model->data(index.sibling(index.row(),col)).toString() << "/" << crypt <<"\"\n";
+        else if (!doub)
+            out << "\t\t\t\"" << model->data(index.sibling(index.row(),col)).toString() << "/" << crypt <<"\",\n";
+        row++;
+        doub=false;
+        index=model->index(row,0,QModelIndex());
+    }
+    ui->messages->setText("Pairs written to file -> "+cryptolistwrite+crypt.toLower()+"_"+exchange.toLower()+".txt");
+    fileout.close();
+}
+
+
+void MainWindow::on_filterButton_clicked()
+{
+    coinfilterDialog coinfilter;
+    QObject::connect(&coinfilter, SIGNAL(destroyed()), this, SLOT(reload_model()));
+    coinfilter.setModal(true); // if nomodal is needed then create pointer inputdialog *datesearch; in mainwindow.h private section, then here use inputdialog = new datesearch(this); datesearch.show();
+    coinfilter.exec();
+}
+
+
+void MainWindow::on_settingsButton_clicked()
+{
+    settingsDialog settingsdialog;
+    QObject::connect(&settingsdialog, SIGNAL(destroyed()), this, SLOT(reload_model()));
+    settingsdialog.setModal(true); // if nomodal is needed then create pointer inputdialog *datesearch; in mainwindow.h private section, then here use inputdialog = new datesearch(this); datesearch.show();
+    settingsdialog.exec();
+    ui->filter->setChecked(false);
+    tableage();
+    this->setWindowTitle("Cryptocurrency tool for Freqtrade, active stake coin "+crypt);
+}
+
+
+void MainWindow::on_stocksButton_clicked()
+{
+    /*QMessageBox msgBox;
+    QClipboard *clipboard=0;
+    msgBox.setWindowTitle("Donate!");
+    msgBox.setText("If you find this program useful please donate to.\nPaypal to jonssofh@hotmail.com\nBTC 1HJ5xJmePkfrYwixbZJaMUcXosiJhYRLbo\nDOT 12XHN5kYhSfCUdwiEAKMkW87L2kKV2AjerLMQukHJ4CnmKbL\nXRP rGzJmHraBUCWpncm3DGdscmAsuy3rDin4R\nADA addr1q9h424fgyqw3y0zer34myqn9lyr303nxcyvzttk8nyqmr7r0242jsgqazg79j8rtkgpxt7g8zlrxdsgcykhv0xgpk8uqh49hnw\nVET 0x136349A99A5a56617e7E7AdbE8c55a0712B0068F\nSupport is most appreciated.");
+    msgBox.exec();
+    if (qEnvironmentVariableIsEmpty("QML_XHR_ALLOW_FILE_READ"))
+        qputenv("QML_XHR_ALLOW_FILE_READ", "1");
+    QQuickView view;
+    view.connect(view.engine(), &QQmlEngine::quit, &msgBox, &QCoreApplication::quit);
+    view.setSource(QUrl("qrc:/demos/stocqt/stocqt.qml"));
+    if (view.status() == QQuickView::Error)
+        ui->messages->setText("Error showing records.");
+    view.setResizeMode(QQuickView::SizeRootObjectToView);
+    view.show();*/
+    //stocks();
+
+
+    stocksDialog stocksdialog;
+    stocksdialog.setModal(true); // if nomodal is needed then create pointer inputdialog *datesearch; in mainwindow.h private section, then here use inputdialog = new datesearch(this); datesearch.show();
+    stocksdialog.exec();
+}
+

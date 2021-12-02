@@ -1,5 +1,12 @@
 <RCC>
     <qresource prefix="/new/icon">
-        <file>c_black.png</file>
+        <file>icons/c_black.png</file>
+        <file>icons/stocks.png</file>
+        <file>icons/coffeecup.png</file>
+        <file>icons/settings.png</file>
+        <file>icons/write_Tofile.png</file>
+        <file>icons/filter.png</file>
+        <file>icons/bitup.png</file>
+        <file>icons/bitdown.png</file>
     </qresource>
 </RCC>
