@@ -22,6 +22,10 @@ private slots:
 
     void on_sellCrypto_clicked();
 
+    void on_getPrice_clicked();
+
+    void on_getCurrentPrices_clicked();
+
 private:
     Ui::stocksDialog *ui;
     void createTable(QString table);

@@ -34,9 +34,9 @@
       </widget>
      </item>
      <item>
-      <widget class="QLabel" name="price">
+      <widget class="QToolButton" name="getPrice">
        <property name="text">
-        <string>TextLabel</string>
+        <string>Get price</string>
        </property>
       </widget>
      </item>
@@ -107,6 +107,20 @@
       <widget class="QLabel" name="proffit">
        <property name="text">
         <string>TextLabel</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QToolButton" name="getCurrentPrices">
+       <property name="toolTip">
+        <string>Update current prices</string>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+       <property name="icon">
+        <iconset resource="resources.qrc">
+         <normaloff>:/new/icon/icons/updateDB.png</normaloff>:/new/icon/icons/updateDB.png</iconset>
        </property>
       </widget>
      </item>

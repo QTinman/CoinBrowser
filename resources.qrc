@@ -8,5 +8,6 @@
         <file>icons/filter.png</file>
         <file>icons/bitup.png</file>
         <file>icons/bitdown.png</file>
+        <file>icons/updateDB.png</file>
     </qresource>
 </RCC>

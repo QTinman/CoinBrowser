@@ -25,10 +25,10 @@ stocksDialog::stocksDialog(QWidget *parent) :
     this->setWindowTitle("Cryptocurrency simulator");
 
     ui->crypto->addItems(readpairfromfile());
-    do_download(ui->crypto->currentText());
-    double close=closePrice;
-    closedelay(close);
-    ui->price->setText(QString::number(closePrice));
+    //do_download(ui->crypto->currentText());
+    //double close=closePrice;
+    //closedelay(close);
+    ui->getPrice->setText("Get price");
     QStringList modellist = initializemodel();
     model = new QStandardItemModel(modellist.length()/tableColums,tableColums,this);
     //connect(ui->search,SIGNAL(textEdited(const QString &)),this,SLOT(searchmodel(const QString&)));
@@ -78,8 +78,9 @@ void stocksDialog::createTable(QString table)
     QString createTables = "create table "+table+"(id integer primary key, "
           "symbol varchar(7), "
           "date varchar(25), "
-          "price real, "
-          "amount real )";
+          "buyPrice real, "
+          "amount real, "
+          "currentPrice)";
     qDebug() << "Creating database, please wait...";
     if (!db.open()) qDebug() << "Error " << db.lastError().text();
     QSqlQuery qry(db);
@@ -95,8 +96,8 @@ void stocksDialog::do_download(QString pair)  // Docs https://binance-docs.githu
     pair+="USDT";
     long startdate = QDateTime(QDate::currentDate(),QTime::currentTime()).toMSecsSinceEpoch()-(3600000);
     url = QUrl(QString("https://www.binance.com/api/v3/klines?symbol="+pair+"&interval=5m&limit="+QString::number(limit)+"&startTime="+QString::number(startdate)));
-    QString szFull=QDateTime::fromMSecsSinceEpoch(startdate).toString("dddd d MMMM yyyy hh:mm:ss");
-    //qDebug() << szFull << " " << url;
+
+    //qDebug() << url;
     QNetworkRequest request(url);
     manager->get(request);
 }
@@ -184,7 +185,7 @@ void stocksDialog::process_dataframe()
 QStringList stocksDialog::initializemodel()
 {
     QString sqlquery, db_symbol, db_date;
-    double db_price, db_amount, totalproffit;
+    double db_buyPrice, db_amount, db_currentPrice, totalproffit;
     QStringList modeldatalist;
     QSqlQuery qry(db);
     sqlquery="SELECT * FROM "+table+";";
@@ -198,16 +199,17 @@ QStringList stocksDialog::initializemodel()
         db_id = qry.value(0).toInt();
         db_symbol = qry.value(1).toString();
         db_date = qry.value(2).toString();
-        db_price = qry.value(3).toDouble();
+        db_buyPrice = qry.value(3).toDouble();
         db_amount = qry.value(4).toDouble();
+        db_currentPrice = qry.value(5).toDouble();
         if (!db_symbol.isEmpty()) {
-            closePrice=0;
-            do_download(db_symbol);
-            closedelay(closePrice);
-            double proffit=(closePrice-db_price)*db_amount;
+            //closePrice=0;
+            //do_download(db_symbol);
+            //closedelay(closePrice);
+            double proffit=(db_currentPrice-db_buyPrice)*db_amount;
             totalproffit+=proffit;
             //qDebug() << db_symbol << db_date << QString::number(db_price, 'F', 3) << QString::number(db_amount, 'F', 2) << QString::number(closePrice, 'F', 2) << QString::number(proffit, 'F', 2);
-            modeldatalist << db_symbol << db_date << QString::number(db_price, 'F', 3) << QString::number(db_amount, 'F', 2) << QString::number(closePrice, 'F', 2) << QString::number(proffit, 'F', 2);
+            modeldatalist << db_symbol << db_date << QString::number(db_buyPrice, 'F', 3) << QString::number(db_amount, 'F', 2) << QString::number(db_currentPrice, 'F', 2) << QString::number(proffit, 'F', 2);
         }
       }
     }
@@ -233,13 +235,6 @@ void stocksDialog::load_model()
         }
       row++;
     }
-}
-
-void stocksDialog::combo_refresh(int comboindex)
-{
-    do_download(ui->crypto->currentText());
-    closedelay(ui->price->text().toDouble());
-    ui->price->setText(QString::number(closePrice));
 }
 
 void stocksDialog::delay(int msec)
@@ -285,31 +280,38 @@ QStringList stocksDialog::readpairfromfile()
     return symbolLists;
 }
 
+void stocksDialog::combo_refresh(int comboindex)
+{
+    ui->getPrice->setText("Get price");
+}
+
 void stocksDialog::on_buyCrypto_clicked()
 {
-    int usd=ui->usd->value();
-    double amount=usd/ui->price->text().toDouble();
-    QString balance=loadsettings("balance").toString();
-    int id=0;
-    QSqlQuery q;
-    q.prepare("SELECT COUNT (*) FROM "+table);
-    q.exec();
-    id= 0;
-    if (q.next()) {
-    id= q.value(0).toInt();
-    }
-    qDebug() << id << " " << usd << " " << balance;
-    if (usd>balance.toInt()) qDebug() << "Error, not enough balance";
-    else {
-        QString sqlquery;
-        QSqlQuery insert_qry(db);
-        QString cdt=QDateTime::currentDateTime().toString("d MMM - hh:mm");
-        sqlquery = "INSERT INTO "+table+" (id,symbol,date,price,amount) VALUES ("+QString::number(id)+", '"+ui->crypto->currentText()+"', '"+cdt+"', "+QString::number(ui->price->text().toDouble())+", "+QString::number(amount)+");";
-        if (!insert_qry.exec(sqlquery)) qDebug() << "Error " << insert_qry.lastError().text();
-        insert_qry.finish();
-        savesettings("balance",balance.toInt()-usd);
-        load_model();
-    }
+    if (ui->getPrice->text() != "Get price") {
+        int usd=ui->usd->value();
+        double amount=usd/ui->getPrice->text().toDouble();
+        QString balance=loadsettings("balance").toString();
+        int id=0;
+        QSqlQuery q;
+        q.prepare("SELECT COUNT (*) FROM "+table);
+        q.exec();
+        id= 0;
+        if (q.next()) {
+        id= q.value(0).toInt();
+        }
+        qDebug() << id << " " << usd << " " << balance;
+        if (usd>balance.toInt()) qDebug() << "Error, not enough balance";
+        else {
+            QString sqlquery;
+            QSqlQuery insert_qry(db);
+            QString cdt=QDateTime::currentDateTime().toString("d MMM - hh:mm");
+            sqlquery = "INSERT INTO "+table+" (id,symbol,date,buyPrice,amount,currentPrice) VALUES ("+QString::number(id)+", '"+ui->crypto->currentText()+"', '"+cdt+"', "+QString::number(ui->getPrice->text().toDouble())+", "+QString::number(amount)+", "+QString::number(ui->getPrice->text().toDouble())+");";
+            if (!insert_qry.exec(sqlquery)) qDebug() << "Error " << insert_qry.lastError().text();
+            insert_qry.finish();
+            savesettings("balance",balance.toInt()-usd);
+            load_model();
+        }
+    } else qDebug() << "Press Get price before purhace";
 }
 
 
@@ -332,5 +334,49 @@ void stocksDialog::on_sellCrypto_clicked()
         ui->balance->setText(loadsettings("balance").toString());
         load_model();
     } else qDebug("Select record");
+}
+
+void stocksDialog::on_getPrice_clicked()
+{
+    closePrice=0;
+    do_download(ui->crypto->currentText());
+    closedelay(closePrice);
+    ui->getPrice->setText(QString::number(closePrice));
+}
+
+
+void stocksDialog::on_getCurrentPrices_clicked()
+{
+    QString sqlquery, db_symbol, db_date;
+    double db_buyPrice, db_amount, totalproffit;
+    QStringList modeldatalist;
+    QSqlQuery qry(db);
+    sqlquery="SELECT * FROM "+table+";";
+    int db_id;
+    totalproffit=0;
+    if (!qry.prepare(sqlquery)) {
+      qDebug() << "prepare failed\n";
+    }
+    if (qry.exec()) {
+      while (qry.next()) {
+        db_id = qry.value(0).toInt();
+        db_symbol = qry.value(1).toString();
+        db_date = qry.value(2).toString();
+        db_buyPrice = qry.value(3).toDouble();
+        db_amount = qry.value(4).toDouble();
+        if (!db_symbol.isEmpty()) {
+            closePrice=0;
+            do_download(db_symbol);
+            closedelay(closePrice);
+            double proffit=(closePrice-db_buyPrice)*db_amount;
+            totalproffit+=proffit;
+            QSqlQuery query;
+            query.exec("UPDATE "+table+" SET currentPrice = "+QString::number(closePrice)+" WHERE id = "+QString::number(db_id));
+
+        }
+      }
+      ui->proffit->setText(QString::number(totalproffit, 'F', 3));
+      load_model();
+    }
 }
 
