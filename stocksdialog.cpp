@@ -8,7 +8,7 @@
 QStringList modellist;
 QString filename="cryptoInvest.json", table="cryptoInvest", pair;
 double closePrice;
-int tableColums=6;
+int tableColums=8;
 
 stocksDialog::stocksDialog(QWidget *parent) :
     QDialog(parent),
@@ -37,9 +37,11 @@ stocksDialog::stocksDialog(QWidget *parent) :
     model->setHeaderData(0, Qt::Horizontal, "Symbol", Qt::DisplayRole);
     model->setHeaderData(1, Qt::Horizontal, "Buy date", Qt::DisplayRole);
     model->setHeaderData(2, Qt::Horizontal, "Buy price", Qt::DisplayRole);
-    model->setHeaderData(3, Qt::Horizontal, "Amount", Qt::DisplayRole);
+    model->setHeaderData(3, Qt::Horizontal, "Crypto amount", Qt::DisplayRole);
     model->setHeaderData(4, Qt::Horizontal, "Current price", Qt::DisplayRole);
-    model->setHeaderData(5, Qt::Horizontal, "Proffit", Qt::DisplayRole);
+    model->setHeaderData(5, Qt::Horizontal, "USD amount", Qt::DisplayRole);
+    model->setHeaderData(6, Qt::Horizontal, "Proffit", Qt::DisplayRole);
+    model->setHeaderData(7, Qt::Horizontal, "Total USD", Qt::DisplayRole);
     connect(ui->crypto, QOverload<int>::of(&QComboBox::currentIndexChanged),
             [=](int index){ combo_refresh(index); });
     ui->tableView->setModel(model);
@@ -79,8 +81,9 @@ void stocksDialog::createTable(QString table)
           "symbol varchar(7), "
           "date varchar(25), "
           "buyPrice real, "
-          "amount real, "
-          "currentPrice)";
+          "cryptoAmount real, "
+          "currentPrice real, "
+          "USD_amount integer)";
     qDebug() << "Creating database, please wait...";
     if (!db.open()) qDebug() << "Error " << db.lastError().text();
     QSqlQuery qry(db);
@@ -185,7 +188,7 @@ void stocksDialog::process_dataframe()
 QStringList stocksDialog::initializemodel()
 {
     QString sqlquery, db_symbol, db_date;
-    double db_buyPrice, db_amount, db_currentPrice, totalproffit;
+    double db_buyPrice, db_cryptoAmount, db_currentPrice, db_USD_amount, totalproffit;
     QStringList modeldatalist;
     QSqlQuery qry(db);
     sqlquery="SELECT * FROM "+table+";";
@@ -200,16 +203,18 @@ QStringList stocksDialog::initializemodel()
         db_symbol = qry.value(1).toString();
         db_date = qry.value(2).toString();
         db_buyPrice = qry.value(3).toDouble();
-        db_amount = qry.value(4).toDouble();
+        db_cryptoAmount = qry.value(4).toDouble();
         db_currentPrice = qry.value(5).toDouble();
+        db_USD_amount = qry.value(6).toInt();
         if (!db_symbol.isEmpty()) {
             //closePrice=0;
             //do_download(db_symbol);
             //closedelay(closePrice);
-            double proffit=(db_currentPrice-db_buyPrice)*db_amount;
+            double proffit=(db_currentPrice-db_buyPrice)*db_cryptoAmount;
+            int totalUSD=db_cryptoAmount*db_currentPrice;
             totalproffit+=proffit;
             //qDebug() << db_symbol << db_date << QString::number(db_price, 'F', 3) << QString::number(db_amount, 'F', 2) << QString::number(closePrice, 'F', 2) << QString::number(proffit, 'F', 2);
-            modeldatalist << db_symbol << db_date << QString::number(db_buyPrice, 'F', 3) << QString::number(db_amount, 'F', 2) << QString::number(db_currentPrice, 'F', 2) << QString::number(proffit, 'F', 2);
+            modeldatalist << db_symbol << db_date << QString::number(db_buyPrice, 'F', 3) << QString::number(db_cryptoAmount, 'F', 2) << QString::number(db_currentPrice, 'F', 2) << QString::number(db_USD_amount) << QString::number(proffit, 'F', 2) << QString::number(totalUSD);
         }
       }
     }
@@ -229,7 +234,9 @@ void stocksDialog::load_model()
          index=model->index(row,col,QModelIndex());
          if (col < 2) model->setData(index,modellist[i]);
          if (col < 5 & col > 1) model->setData(index,modellist[i].toDouble());
-         if (col == 5) model->setData(index,modellist[i].toDouble());
+         if (col == 5) model->setData(index,modellist[i].toInt());
+         if (col == 6) model->setData(index,modellist[i].toDouble());
+         if (col == 7) model->setData(index,modellist[i].toInt());
          model->setData(index, Qt::AlignCenter, Qt::TextAlignmentRole);
          i++;
         }
@@ -305,7 +312,7 @@ void stocksDialog::on_buyCrypto_clicked()
             QString sqlquery;
             QSqlQuery insert_qry(db);
             QString cdt=QDateTime::currentDateTime().toString("d MMM - hh:mm");
-            sqlquery = "INSERT INTO "+table+" (id,symbol,date,buyPrice,amount,currentPrice) VALUES ("+QString::number(id)+", '"+ui->crypto->currentText()+"', '"+cdt+"', "+QString::number(ui->getPrice->text().toDouble())+", "+QString::number(amount)+", "+QString::number(ui->getPrice->text().toDouble())+");";
+            sqlquery = "INSERT INTO "+table+" (id,symbol,date,buyPrice,cryptoAmount,currentPrice,USD_amount) VALUES ("+QString::number(id)+", '"+ui->crypto->currentText()+"', '"+cdt+"', "+QString::number(ui->getPrice->text().toDouble())+", "+QString::number(amount)+", "+QString::number(ui->getPrice->text().toDouble())+", "+QString::number(usd)+");";
             if (!insert_qry.exec(sqlquery)) qDebug() << "Error " << insert_qry.lastError().text();
             insert_qry.finish();
             savesettings("balance",balance.toInt()-usd);
