@@ -352,7 +352,7 @@ QStringList MainWindow::initializemodel()
 
 
         double percent,price_change;
-        int db_id,coincounts=0,coininlist=0,unique=0;
+        int db_id,coincounts=1,coininlist=0,unique=0;
         QDate cd = QDate::currentDate();
         QDateTime cdt = QDateTime::currentDateTime();
         QSqlRecord record;

@@ -28,7 +28,6 @@ find_package(QT NAMES Qt6 Qt5 COMPONENTS Widgets Sql Network REQUIRED)
 find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets REQUIRED)
 find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Sql REQUIRED)
 find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Network REQUIRED)
-find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Quick REQUIRED)
 
 
 set(PROJECT_SOURCES
@@ -67,4 +66,3 @@ endif()
 target_link_libraries(coinbrowser PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
 target_link_libraries(coinbrowser PRIVATE Qt${QT_VERSION_MAJOR}::Sql)
 target_link_libraries(coinbrowser PRIVATE Qt${QT_VERSION_MAJOR}::Network)
-target_link_libraries(coinbrowser PRIVATE Qt${QT_VERSION_MAJOR}::Quick)
