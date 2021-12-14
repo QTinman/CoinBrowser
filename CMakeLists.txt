@@ -45,6 +45,8 @@ set(PROJECT_SOURCES
         stocksdialog.cpp
         stocksdialog.h
         stocksdialog.ui
+        worker.cpp
+        worker.h
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)

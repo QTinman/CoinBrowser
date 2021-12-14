@@ -4,8 +4,10 @@
 #include <QtGui>
 #include <QtSql>
 #include <QGuiApplication>
+#include "worker.h"
 
 QStringList modellist;
+Worker worker;
 QString filename="cryptoInvest.json", table="cryptoInvest", pair, transfere_error="";
 double closePrice;
 int tableColums=8;
@@ -153,17 +155,17 @@ void stocksDialog::replyFinished (QNetworkReply *reply)
         QString Qclose = cryptolist[0][4].toString();
         closePrice=Qclose.toDouble();
         transfere_error="";
-        process_dataframe();
+        process_dataframe(filename);
     }
 
     reply->deleteLater();
 }
 
-void stocksDialog::process_dataframe()
+void stocksDialog::process_dataframe(QString fname)
 {
-    QJsonDocument jsonDoc = ReadJson(filename);
-    double low,high,open,close,volumn=0;
-    double opentimestamp,closetimestamp;
+    QJsonDocument jsonDoc = ReadJson(fname);
+    double low=0,high=0,open=0,close,volumn=0;
+    double opentimestamp=0,closetimestamp=0;
 
     QString Qopen,Qhigh,Qlow,Qclose,Qvolum;
     int trades=0;
@@ -247,10 +249,8 @@ void stocksDialog::load_model()
 void stocksDialog::delay(int msec)
 {
     QTime dieTime= QTime::currentTime().addMSecs(msec);
-    while (QTime::currentTime() < dieTime) {
+    while (QTime::currentTime() < dieTime)
         QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
-        if (transfere_error=="error") break;
-    }
 }
 
 void stocksDialog::closedelay(double close)
@@ -352,8 +352,12 @@ void stocksDialog::on_sellCrypto_clicked()
 void stocksDialog::on_getPrice_clicked()
 {
     closePrice=0;
-    do_download(ui->crypto->currentText());
-    closedelay(closePrice);
+    //do_download(ui->crypto->currentText());
+    QString url="https://www.binance.com/api/v3/klines?symbol="+ui->crypto->currentText()+"USDT&interval=5m&limit=1&startTime="+QString::number(QDateTime::currentDateTime().addMSecs(-300000).toMSecsSinceEpoch());
+    worker.get(url);
+    delay(500);
+    //closedelay(closePrice);
+    process_dataframe("./files/"+ui->crypto->currentText()+"USDT.json");
     ui->getPrice->setText(QString::number(closePrice));
 }
 
@@ -363,6 +367,7 @@ void stocksDialog::on_getCurrentPrices_clicked()
     QString sqlquery, db_symbol, db_date;
     double db_buyPrice, db_amount, totalproffit;
     QStringList modeldatalist;
+
     QSqlQuery qry(db);
     sqlquery="SELECT * FROM "+table+";";
     int db_id;
@@ -378,17 +383,24 @@ void stocksDialog::on_getCurrentPrices_clicked()
         db_buyPrice = qry.value(3).toDouble();
         db_amount = qry.value(4).toDouble();
         if (!db_symbol.isEmpty()) {
-            closePrice=0;
             ui->messages->setText("Updating "+db_symbol);
-            do_download(db_symbol);
-            closedelay(closePrice);
-            double proffit=(closePrice-db_buyPrice)*db_amount;
-            totalproffit+=proffit;
-            QSqlQuery query;
-            query.exec("UPDATE "+table+" SET currentPrice = "+QString::number(closePrice)+" WHERE id = "+QString::number(db_id));
-
+            QString url="https://www.binance.com/api/v3/klines?symbol="+db_symbol+"USDT&interval=5m&limit=1&startTime="+QString::number(QDateTime::currentDateTime().addMSecs(-300000).toMSecsSinceEpoch());
+            worker.get(url);
         }
       }
+      //qDebug() << db_symbol;
+      delay(1000);
+    if (qry.exec()) {
+      while (qry.next()) {
+          db_id = qry.value(0).toInt();
+          db_symbol = qry.value(1).toString();
+          process_dataframe("./files/"+db_symbol+"USDT.json");
+          double proffit=(closePrice-db_buyPrice)*db_amount;
+          totalproffit+=proffit;
+          QSqlQuery query;
+          query.exec("UPDATE "+table+" SET currentPrice = "+QString::number(closePrice)+" WHERE id = "+QString::number(db_id));
+      }
+    }
       ui->proffit->setText("$"+QString::number(totalproffit, 'F', 3));
       ui->messages->setText("Update done");
       load_model();

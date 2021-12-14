@@ -31,7 +31,7 @@ private:
     void createTable(QString table);
     void do_download(QString pair);
     QJsonDocument ReadJson(const QString &path);
-    void process_dataframe();
+    void process_dataframe(QString fname);
     void load_model();
     QStringList initializemodel();
     QVariant loadsettings(QString settings);
