@@ -97,17 +97,6 @@ void Worker::get(QString location)
 {
     //qInfo() << "Getting from server...";
     QNetworkRequest request = QNetworkRequest(QUrl(location));
-    if (!location.contains("binance") && !location.contains("kucoin")) {
-        QString keys="am9objpwYXNz", host=location.mid(0,location.indexOf(":",5));
-        QString arg="Basic "+keys;
-        int port=location.mid(location.indexOf(":",5)+1,4).toInt();
-        host.remove("http://");
-        manager.connectToHost(host,port);
-        request.setHeader(QNetworkRequest::ContentTypeHeader,QString("application/json"));
-        request.setRawHeader("accept", "application/json");
-        request.setRawHeader(QByteArray("Authorization"), arg.toUtf8());
-        //qDebug() << location;
-    }
     QNetworkReply *reply=manager.get(QNetworkRequest(request));
     connect(reply,&QNetworkReply::readyRead,this,&Worker::readyRead);
 }
@@ -116,10 +105,6 @@ void Worker::post(QString location, QByteArray data)
 {
     //qInfo() << "Posting to server...";
     QNetworkRequest request = QNetworkRequest(QUrl(location));
-    QString arg="Basic am9objpwYXNz";
-    request.setHeader(QNetworkRequest::ContentTypeHeader,"application/json");
-    request.setRawHeader(QByteArray("Authorization"), arg.toUtf8());
-    data.append("Authorization"+ arg.toUtf8());
     QNetworkReply *reply=manager.post(request,data);
     connect(reply,&QNetworkReply::readyRead,this,&Worker::readyRead);
 }
@@ -146,13 +131,10 @@ void Worker::readyRead()
         //if (!data.isEmpty()) qInfo() << data;
         QString pair=reply->url().toString();
         int start,end;
-        if (pair.contains("whitelist")) {
-            pair="whitelist";
-        } else {
-            start=pair.indexOf("symbol=");
-            end=pair.indexOf("&",start);
-            pair=pair.mid(start+7,end-start-7);
-        }
+        start=pair.indexOf("symbol=");
+        end=pair.indexOf("&",start);
+        pair=pair.mid(start+7,end-start-7);
+
         QFile *file = new QFile("./files/"+pair+".json");
         if (file->error()) qDebug() << file->errorString();
         if(file->open(QFile::WriteOnly))
@@ -215,23 +197,3 @@ void Worker::sslErrors(QNetworkReply *reply, const QList<QSslError> &errors)
     Q_UNUSED(errors);
     //qInfo() << "sslErrors";
 }
-
-void Worker::strat_command(QString command, QString param, QString get_post, QString server)
-{
-    QString keys="am9objpwYXNz";
-
-        QUrl url = QUrl(QString("http://"+server+"/api/v1/"+command));
-        QString arg="Basic "+keys;
-        QByteArray jsonstring=param.toUtf8();
-        QNetworkRequest request(url);
-        manager.connectToHost(server.mid(0,server.indexOf(":")),server.mid(server.indexOf(":")+1,4).toInt());
-        request.setHeader(QNetworkRequest::ContentTypeHeader,QString("application/json"));
-        request.setRawHeader("accept", "application/json");
-        request.setRawHeader(QByteArray("Authorization"), arg.toUtf8());
-        if (get_post == "get" ) manager.get(request);
-        if (get_post == "post") manager.post(request,param.toUtf8());
-
-
-}
-
-

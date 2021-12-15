@@ -22,7 +22,6 @@ signals:
 public slots:
     void get(QString location);
     void post(QString location, QByteArray data);
-    void strat_command(QString command, QString param, QString get_post, QString server);
     bool UpdateFileTimestamp(std::string fileName);
     void fileChangedEvent(const QString & path);
     QJsonDocument ReadJson(const QString &path);
