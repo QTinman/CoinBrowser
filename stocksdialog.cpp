@@ -352,11 +352,9 @@ void stocksDialog::on_sellCrypto_clicked()
 void stocksDialog::on_getPrice_clicked()
 {
     closePrice=0;
-    //do_download(ui->crypto->currentText());
     QString url="https://www.binance.com/api/v3/klines?symbol="+ui->crypto->currentText()+"USDT&interval=5m&limit=1&startTime="+QString::number(QDateTime::currentDateTime().addMSecs(-300000).toMSecsSinceEpoch());
     worker.get(url);
-    delay(500);
-    //closedelay(closePrice);
+    delay(1000);
     process_dataframe("./files/"+ui->crypto->currentText()+"USDT.json");
     ui->getPrice->setText(QString::number(closePrice));
 }
@@ -386,6 +384,7 @@ void stocksDialog::on_getCurrentPrices_clicked()
             ui->messages->setText("Updating "+db_symbol);
             QString url="https://www.binance.com/api/v3/klines?symbol="+db_symbol+"USDT&interval=5m&limit=1&startTime="+QString::number(QDateTime::currentDateTime().addMSecs(-300000).toMSecsSinceEpoch());
             worker.get(url);
+            delay(20);
         }
       }
       //qDebug() << db_symbol;
