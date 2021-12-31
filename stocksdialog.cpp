@@ -24,7 +24,7 @@ stocksDialog::stocksDialog(QWidget *parent) :
     if (!db.tables().contains(table)) createTable(table);
     manager = new QNetworkAccessManager(this);
     connect(manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(replyFinished(QNetworkReply*)));
-    this->setWindowTitle("Cryptocurrency simulator");
+    this->setWindowTitle("Portfolio simulator");
 
     ui->crypto->addItems(readpairfromfile());
     //do_download(ui->crypto->currentText());
@@ -192,6 +192,7 @@ QStringList stocksDialog::initializemodel()
 {
     QString sqlquery, db_symbol, db_date;
     double db_buyPrice, db_cryptoAmount, db_currentPrice, db_USD_amount, totalproffit;
+    int sumProffit=0;
     QStringList modeldatalist;
     QSqlQuery qry(db);
     sqlquery="SELECT * FROM "+table+";";
@@ -216,11 +217,13 @@ QStringList stocksDialog::initializemodel()
             double proffit=(db_currentPrice-db_buyPrice)*db_cryptoAmount;
             int totalUSD=db_cryptoAmount*db_currentPrice;
             totalproffit+=proffit;
+            sumProffit+=totalUSD;
             modeldatalist << db_symbol << db_date << QString::number(db_buyPrice, 'F', 3) << QString::number(db_cryptoAmount, 'F', 2) << QString::number(db_currentPrice, 'F', 2) << QString::number(db_USD_amount) << QString::number(proffit, 'F', 2) << QString::number(totalUSD);
         }
       }
     }
     ui->proffit->setText("$"+QString::number(totalproffit, 'F', 3));
+    ui->sumProfit->setText("$"+QString::number(sumProffit));
     return modeldatalist;
 }
 
