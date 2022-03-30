@@ -68,6 +68,9 @@ settingsDialog::settingsDialog(QWidget *parent) :
         tableage = 999;
     } else ui->tableage->setValue(tableage);
     int autojsonmin = loadsettings("autojsonmin").toInt();
+    int mSecDelay = loadsettings("mSecDelay").toInt();
+    if (mSecDelay==0) ui->mSecDelay->setValue(20);
+    else ui->mSecDelay->setValue(mSecDelay);
     ui->autojsonmin->setValue(autojsonmin);
     if (autojsonmin == 0) {
         ui->autojsonmin->setValue(240);
@@ -85,8 +88,6 @@ settingsDialog::settingsDialog(QWidget *parent) :
 }
 settingsDialog::~settingsDialog()
 {
-
-
     delete ui;
 }
 
@@ -170,7 +171,7 @@ void settingsDialog::on_buttonBox_accepted()
     appsettings.setValue(ui->exchanges->currentText().toLower()+"_stake", QVariant::fromValue(ui->maincoins->currentText()));
     crypt = loadsettings(exchange.toLower()+"_stake").toString();
     appsettings.endGroup();
-
+    savesettings("mSecDelay",ui->mSecDelay->value());
     savesettings("json_path",ui->jsonpathstring->text());
     savesettings("cryptolistread",ui->cryptolistread->text());
     savesettings("cryptolistwrite",ui->cryptolistwrite->text());

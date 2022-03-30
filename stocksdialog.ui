@@ -102,14 +102,14 @@
         </size>
        </property>
        <property name="text">
-        <string>Price USD</string>
+        <string>USD</string>
        </property>
       </widget>
      </item>
      <item>
       <widget class="QSpinBox" name="usd">
        <property name="toolTip">
-        <string>Amount USD to buy cryptocurrency</string>
+        <string>Amount USD to buy or sell cryptocurrency</string>
        </property>
        <property name="maximum">
         <number>99999</number>

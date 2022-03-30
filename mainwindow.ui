@@ -64,7 +64,7 @@
         <item>
          <widget class="QToolButton" name="stocksButton">
           <property name="toolTip">
-           <string>Crypto invest simulator</string>
+           <string>Portfolio simulator</string>
           </property>
           <property name="text">
            <string/>

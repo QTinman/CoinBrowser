@@ -333,6 +333,7 @@ void stocksDialog::on_buyCrypto_clicked()
 
 void stocksDialog::on_sellCrypto_clicked()
 {
+    int usd=0;
     QString balance=loadsettings("balance").toString();
     QModelIndexList indexes = ui->tableView->selectionModel()->selection().indexes();
     if (!indexes.isEmpty()) {
@@ -340,13 +341,29 @@ void stocksDialog::on_sellCrypto_clicked()
         crypt = model->data(index.sibling(index.row(),0)).toString();
         double amount = model->data(index.sibling(index.row(),3)).toDouble();
         double price = model->data(index.sibling(index.row(),4)).toDouble();
-        int usd=price*amount;
-        QString sqlquery;
-        QSqlQuery delete_qry(db);
-        sqlquery = "DELETE FROM "+table+" WHERE symbol='"+crypt+"';";
-        if (!delete_qry.exec(sqlquery)) ui->messages->setText("Error " + delete_qry.lastError().text());
-        else savesettings("balance",balance.toInt()+usd);
-        delete_qry.finish();
+        int USD_amount = model->data(index.sibling(index.row(),5)).toInt();
+        if (ui->usd->value()>0 && amount*price >= ui->usd->value()) {
+            usd=ui->usd->value();
+            double rest=amount-(usd/price);
+            USD_amount-=usd;
+            QString sqlquery;
+            QSqlQuery update_qry(db);
+            if (USD_amount>0)
+                sqlquery = "UPDATE "+table+" SET cryptoAmount = "+QString::number(rest)+", USD_amount = "+QString::number(USD_amount)+" WHERE symbol='"+crypt+"';";
+            else
+                sqlquery = "DELETE FROM "+table+" WHERE symbol='"+crypt+"';";
+            if (!update_qry.exec(sqlquery)) ui->messages->setText("Error " + update_qry.lastError().text());
+            else savesettings("balance",balance.toInt()+usd);
+            update_qry.finish();
+    } else {
+            usd=price*amount;
+            QString sqlquery;
+            QSqlQuery delete_qry(db);
+            sqlquery = "DELETE FROM "+table+" WHERE symbol='"+crypt+"';";
+            if (!delete_qry.exec(sqlquery)) ui->messages->setText("Error " + delete_qry.lastError().text());
+            else savesettings("balance",balance.toInt()+usd);
+            delete_qry.finish();
+        }
         ui->balance->setText(loadsettings("balance").toString());
         load_model();
     } else ui->messages->setText("Select record");
@@ -368,7 +385,8 @@ void stocksDialog::on_getCurrentPrices_clicked()
     QString sqlquery, db_symbol, db_date;
     double db_buyPrice, db_amount, totalproffit;
     QStringList modeldatalist;
-
+    int mSecDelay = loadsettings("mSecDelay").toInt();
+    if (mSecDelay==0) mSecDelay=20;
     QSqlQuery qry(db);
     sqlquery="SELECT * FROM "+table+";";
     int db_id;
@@ -387,7 +405,7 @@ void stocksDialog::on_getCurrentPrices_clicked()
             ui->messages->setText("Updating "+db_symbol);
             QString url="https://www.binance.com/api/v3/klines?symbol="+db_symbol+"USDT&interval=5m&limit=1&startTime="+QString::number(QDateTime::currentDateTime().addMSecs(-300000).toMSecsSinceEpoch());
             worker.get(url);
-            delay(20);
+            delay(mSecDelay);
         }
       }
       //qDebug() << db_symbol;
