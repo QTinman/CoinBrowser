@@ -242,6 +242,7 @@ void stocksDialog::load_model()
          if (col == 5) model->setData(index,modellist[i].toInt());
          if (col == 6) model->setData(index,modellist[i].toDouble());
          if (col == 7) model->setData(index,modellist[i].toInt());
+        // model->setData(index, Qt::ColorOnly) color on numbers
          model->setData(index, Qt::AlignCenter, Qt::TextAlignmentRole);
          i++;
         }
