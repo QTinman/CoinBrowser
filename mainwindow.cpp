@@ -764,7 +764,7 @@ void MainWindow::on_coffee_clicked()
     QMessageBox msgBox;
     QClipboard *clipboard=0;
     msgBox.setWindowTitle("Coffee");
-    msgBox.setText("A coffee for creator \nBTC 1HJ5xJmePkfrYwixbZJaMUcXosiJhYRLbo\nETH/USDT 0x425c98102c43cd4d8e052Fd239B016dCb6CDa597\nAppreciated");
+    msgBox.setText("A coffee for creator \nBTC bc1qmeetnrmdfu2czp43ggq4v56wrxtk7cfahyr2m9\nETH/USDT 0x425c98102c43cd4d8e052Fd239B016dCb6CDa597\nAppreciated");
     QAbstractButton* pButtonYes = msgBox.addButton("Copy to clipboard", QMessageBox::YesRole);
     msgBox.exec();
     if (msgBox.clickedButton()==pButtonYes) {
