@@ -239,6 +239,7 @@ void MainWindow::tableage()
     if (tableage == 0) tableage = 999;
     ui->tables->clear();
     QDateTime cdt = QDateTime::currentDateTime();
+    QDate cd = QDate::currentDate();
     for ( const auto& i : db.tables()  ) if (i.contains(crypt+"_")) {
         int mm,hh,dd,mo,s,u;
         u=i.indexOf("_");
@@ -251,13 +252,13 @@ void MainWindow::tableage()
         mm=i.mid(s+1,i.length()-s-1).toInt();
         QDate datetable;
         QTime timetable;
-        datetable.setDate(2021,mo,dd);
+        datetable.setDate(cd.year(),mo,dd);
         timetable.setHMS(hh,mm,0);
         QDateTime cdttable;
         cdttable.setDate(datetable);
         cdttable.setTime(timetable);
         //qDebug() << cdt.addSecs(-tableage*3600) << " " << cdttable;
-        if (cdt.addSecs(-tableage*3600) < cdttable) {
+        if (cdt.addSecs(-(tableage*3600)) < cdttable) {
 
             ui->tables->addItem(i);
         }
@@ -764,7 +765,7 @@ void MainWindow::on_coffee_clicked()
     QMessageBox msgBox;
     QClipboard *clipboard=0;
     msgBox.setWindowTitle("Coffee");
-    msgBox.setText("A coffee for creator \nBTC 1HJ5xJmePkfrYwixbZJaMUcXosiJhYRLbo\nETH/USDT 0x425c98102c43cd4d8e052Fd239B016dCb6CDa597\nAppreciated");
+    msgBox.setText("A coffee for creator \nBTC bc1qmeetnrmdfu2czp43ggq4v56wrxtk7cfahyr2m9\nETH/USDT 0x425c98102c43cd4d8e052Fd239B016dCb6CDa597\nAppreciated");
     QAbstractButton* pButtonYes = msgBox.addButton("Copy to clipboard", QMessageBox::YesRole);
     msgBox.exec();
     if (msgBox.clickedButton()==pButtonYes) {

@@ -25,9 +25,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 #endif()
 
 find_package(QT NAMES Qt6 Qt5 COMPONENTS Widgets Sql Network REQUIRED)
+#find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Gui REQUIRED)
 find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets REQUIRED)
 find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Sql REQUIRED)
 find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Network REQUIRED)
+find_package(OpenSSL REQUIRED)
+
 
 
 set(PROJECT_SOURCES
@@ -66,5 +69,8 @@ else()
 endif()
 
 target_link_libraries(coinbrowser PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
+#target_link_libraries(coinbrowser PRIVATE Qt${QT_VERSION_MAJOR}::Gui)
 target_link_libraries(coinbrowser PRIVATE Qt${QT_VERSION_MAJOR}::Sql)
 target_link_libraries(coinbrowser PRIVATE Qt${QT_VERSION_MAJOR}::Network)
+#target_link_libraries(coinbrowser OpenSSL::SSL)
+target_link_libraries(coinbrowser PRIVATE OpenSSL::applink)

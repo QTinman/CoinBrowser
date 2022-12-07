@@ -13,7 +13,7 @@
 #include <QNetworkRequest>
 #include <QNetworkReply>
 #include <QUrl>
-#include <QtQml/QQmlEngine>
+//#include <QtQml/QQmlEngine>
 
 extern QSqlDatabase db;
 extern QTimer *timer;
