@@ -239,6 +239,7 @@ void MainWindow::tableage()
     if (tableage == 0) tableage = 999;
     ui->tables->clear();
     QDateTime cdt = QDateTime::currentDateTime();
+    QDate cd = QDate::currentDate();
     for ( const auto& i : db.tables()  ) if (i.contains(crypt+"_")) {
         int mm,hh,dd,mo,s,u;
         u=i.indexOf("_");
@@ -251,13 +252,13 @@ void MainWindow::tableage()
         mm=i.mid(s+1,i.length()-s-1).toInt();
         QDate datetable;
         QTime timetable;
-        datetable.setDate(2021,mo,dd);
+        datetable.setDate(cd.year(),mo,dd);
         timetable.setHMS(hh,mm,0);
         QDateTime cdttable;
         cdttable.setDate(datetable);
         cdttable.setTime(timetable);
-        //qDebug() << cdt.addSecs(-tableage*3600) << " " << cdttable;
-        if (cdt.addSecs(-tableage*3600) < cdttable) {
+        qDebug() << cdt.addSecs(-tableage*3600) << " " << cdttable;
+        if (cdt.addSecs(-(tableage*3600)) < cdttable) {
 
             ui->tables->addItem(i);
         }
