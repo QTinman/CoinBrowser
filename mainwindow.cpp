@@ -257,7 +257,7 @@ void MainWindow::tableage()
         QDateTime cdttable;
         cdttable.setDate(datetable);
         cdttable.setTime(timetable);
-        qDebug() << cdt.addSecs(-tableage*3600) << " " << cdttable;
+        //qDebug() << cdt.addSecs(-tableage*3600) << " " << cdttable;
         if (cdt.addSecs(-(tableage*3600)) < cdttable) {
 
             ui->tables->addItem(i);
