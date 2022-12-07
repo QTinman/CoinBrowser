@@ -1,7 +1,7 @@
 #ifndef STOCKSDIALOG_H
 #define STOCKSDIALOG_H
 
-#include <QDialog>
+#include <QtWidgets/QDialog>
 #include "mainwindow.h"
 
 namespace Ui {

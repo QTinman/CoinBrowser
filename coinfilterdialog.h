@@ -1,7 +1,7 @@
 #ifndef COINFILTERDIALOG_H
 #define COINFILTERDIALOG_H
 
-#include <QDialog>
+#include <QtWidgets/QDialog>
 
 namespace Ui {
 class coinfilterDialog;
