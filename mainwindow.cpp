@@ -4,9 +4,15 @@
 #include "settingsdialog.h"
 #include "stocksdialog.h"
 #include "stocks.h"
-#include <QtCore>
-#include <QtGui>
-#include <QtSql>
+#include <QFile>
+#include <QTextStream>
+#include <QSet>
+#include <QTimer>
+#include <QString>
+#include <QIODevice>
+
+#include <QSqlRecord>
+
 #include <QMessageBox>
 #include <QGuiApplication>
 #include <QAbstractButton>
@@ -97,7 +103,7 @@ MainWindow::MainWindow(QWidget *parent)
     volume_percent_max = loadsettings("volume_percent_max").toDouble();
     volum_min  = loadsettings("volum_min").toDouble();
     volume_min_check  = loadsettings("volum_min_check").toBool();
-    QStringList exchanges={"Binance","Bittrex","Kraken","FTX","Kucoin"};
+    QStringList exchanges={"Binance","Bittrex","Kraken","FTX","Kucoin","GateIO"};
     QString pwd = QDir::currentPath();
     QString json_path = loadsettings("json_path").toString();
     if (json_path == "") savesettings("json_path",pwd);
@@ -289,62 +295,67 @@ void MainWindow::createdb()
     qry.finish();
     create_db=true;
 }
-
 QStringList MainWindow::readpairs()
 {
     QFile filein;
-    QString content,outstring;
-    QStringList pairs,contentlist,blacklist={"SUSD","USD","EUR","USDC","BUSD","GBP","BNB","TUSD","UST"};
-    QSettings appsettings("QTinman",appgroup);
+    QStringList pairs;
+
+    // Convert blacklist to QSet for O(1) lookups
+    QSet<QString> blacklist = {"SUSD", "USD", "EUR", "USDC", "BUSD", "GBP", "BNB", "TUSD", "UST"};
+
+    QSettings appsettings("QTinman", appgroup);
     appsettings.beginGroup(appgroup);
-    QStringList blacklist_exchange = appsettings.value(exchange.toLower()+"_blacklist").value<QStringList>();
+    QStringList blacklistList = appsettings.value(exchange.toLower()+"_blacklist").toStringList();
+    QSet<QString> blacklist_exchange(blacklistList.begin(), blacklistList.end());
     appsettings.endGroup();
-    QStringList bittrex_blacklist = loadsettings("bittrex_blacklist").toStringList();
-    bool blackl=false,inrank=true;
-    int s=10,counter=0,added=0;
+
+    QStringList bittrexList = loadsettings("bittrex_blacklist").toStringList();
+    QSet<QString> bittrex_blacklist(bittrexList.begin(), bittrexList.end());
+
     QString cryptolistread = loadsettings("cryptolistread").toString();
+    QString filename = cryptolistread + "/raw_" + exchange.toLower() + ".txt";
 
-    filein.setFileName(cryptolistread+"/raw_"+exchange.toLower()+".txt");
-    if (filein.open(QIODevice::ReadOnly))
-    {
-       QTextStream in(&filein);
-
-       while (!in.atEnd())
-       {
-          content = in.readLine();
-
-          int middle = content.indexOf("/",s);
-          int start = content.lastIndexOf(" ",middle);
-          int end = content.indexOf(" ",middle);
-          QString par1 = content.mid(start+1,middle-start-1);
-          QString par2 = content.mid(middle+1,end-middle-1);
-          for ( const auto& i : blacklist  )
-            if (i == par1) blackl = true;
-
-          for ( const auto& i : blacklist_exchange  ) //Bittrex blacklist
-            if (i == par1 && !show_only_blacklisted) blackl = true;
-
-          if (crypt == par1) blackl = true;
-          if (inrank && !blackl  && crypt == par2 ) {
-              outstring = content.mid(start+1,end-start-1).trimmed();
-              pairs.append(par1);
-
-              added++;
-          }
-          counter=0;
-          blackl = false;
-       }
-       filein.close();
-       ui->messages->setText("Pairs found for " + exchange + " " + QString::number(added));
-       //qDebug() << "Coins Added " << added;
-
-    } else {
-        ui->messages->setText(cryptolistread+"/raw_"+exchange.toLower()+".txt not found, create with freqtrade list-pairs --exchange "+exchange.toLower()+" > raw_"+exchange.toLower()+".txt");
-        //qDebug() << "Error " << filein.errorString();
+    filein.setFileName(filename);
+    if (!filein.open(QIODevice::ReadOnly)) {
+        ui->messages->setText(filename + " not found, create with freqtrade list-pairs --exchange " + exchange.toLower() + " > raw_" + exchange.toLower() + ".txt");
+        return pairs;
     }
+
+    QTextStream in(&filein);
+    int added = 0;
+
+    while (!in.atEnd())
+    {
+        QString content = in.readLine();
+
+        // Find the first "/" after position 10
+        int middle = content.indexOf("/", 10);
+        if (middle == -1) continue; // Skip invalid lines
+
+        int start = content.lastIndexOf(" ", middle);
+        int end = content.indexOf(" ", middle);
+
+        if (start == -1 || end == -1) continue; // Invalid format
+
+        QStringView par1 = QStringView(content).mid(start + 1, middle - start - 1);
+        QStringView par2 = QStringView(content).mid(middle + 1, end - middle - 1);
+
+        // Check blacklists using QSet for fast lookups
+        if (blacklist.contains(par1.toString()) || blacklist_exchange.contains(par1.toString()) || crypt == par1)
+            continue;
+
+        if (crypt == par2) {
+            pairs.append(par1.toString());  // Convert QStringView to QString
+            added++;
+        }
+    }
+
+    filein.close();
+    ui->messages->setText("Pairs found for " + exchange + " " + QString::number(added));
 
     return pairs;
 }
+
 
 
 QStringList MainWindow::initializemodel()
