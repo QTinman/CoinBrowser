@@ -1,5 +1,6 @@
 #include "stocksdialog.h"
 #include "ui_stocksdialog.h"
+#include "constants.h"
 #include <QtCore>
 #include <QtGui>
 #include <QtSql>
@@ -238,7 +239,7 @@ void stocksDialog::load_model()
        for (col=0;col<tableColums;col++) {
          index=model->index(row,col,QModelIndex());
          if (col < 2) model->setData(index,modellist[i]);
-         if (col < 5 & col > 1) model->setData(index,modellist[i].toDouble());
+         if (col < 5 && col > 1) model->setData(index,modellist[i].toDouble());
          if (col == 5) model->setData(index,modellist[i].toInt());
          if (col == 6) model->setData(index,modellist[i].toDouble());
          if (col == 7) model->setData(index,modellist[i].toInt());
@@ -254,18 +255,18 @@ void stocksDialog::delay(int msec)
 {
     QTime dieTime= QTime::currentTime().addMSecs(msec);
     while (QTime::currentTime() < dieTime)
-        QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
+        QCoreApplication::processEvents(QEventLoop::AllEvents, Constants::PROCESS_EVENTS_TIMEOUT_MS);
 }
 
 void stocksDialog::closedelay(double close)
 {
-    QTime dieTime= QTime::currentTime().addMSecs(1000);
+    QTime dieTime= QTime::currentTime().addMSecs(Constants::DELAY_ONE_SECOND_MS);
     while (close == closePrice) {
-        QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
+        QCoreApplication::processEvents(QEventLoop::AllEvents, Constants::PROCESS_EVENTS_TIMEOUT_MS);
         if (QTime::currentTime() > dieTime) break;
     }
-    dieTime= QTime::currentTime().addMSecs(150);
-    while (QTime::currentTime() < dieTime) QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
+    dieTime= QTime::currentTime().addMSecs(Constants::DELAY_LONG_MS);
+    while (QTime::currentTime() < dieTime) QCoreApplication::processEvents(QEventLoop::AllEvents, Constants::PROCESS_EVENTS_TIMEOUT_MS);
 }
 
 QStringList stocksDialog::readpairfromfile()
@@ -321,8 +322,16 @@ void stocksDialog::on_buyCrypto_clicked()
             QString sqlquery;
             QSqlQuery insert_qry(db);
             QString cdt=QDateTime::currentDateTime().toString("d MMM - hh:mm");
-            sqlquery = "INSERT INTO "+table+" (id,symbol,date,buyPrice,cryptoAmount,currentPrice,USD_amount) VALUES ("+QString::number(id)+", '"+ui->crypto->currentText()+"', '"+cdt+"', "+QString::number(ui->getPrice->text().toDouble())+", "+QString::number(amount)+", "+QString::number(ui->getPrice->text().toDouble())+", "+QString::number(usd)+");";
-            if (!insert_qry.exec(sqlquery)) ui->messages->setText("Error " + insert_qry.lastError().text());
+            sqlquery = "INSERT INTO "+table+" (id,symbol,date,buyPrice,cryptoAmount,currentPrice,USD_amount) VALUES (:id, :symbol, :date, :buyPrice, :cryptoAmount, :currentPrice, :USD_amount)";
+            insert_qry.prepare(sqlquery);
+            insert_qry.bindValue(":id", id);
+            insert_qry.bindValue(":symbol", ui->crypto->currentText());
+            insert_qry.bindValue(":date", cdt);
+            insert_qry.bindValue(":buyPrice", ui->getPrice->text().toDouble());
+            insert_qry.bindValue(":cryptoAmount", amount);
+            insert_qry.bindValue(":currentPrice", ui->getPrice->text().toDouble());
+            insert_qry.bindValue(":USD_amount", usd);
+            if (!insert_qry.exec()) ui->messages->setText("Error " + insert_qry.lastError().text());
             insert_qry.finish();
             savesettings("balance",balance.toInt()-usd);
             ui->balance->setText(loadsettings("balance").toString());
@@ -349,11 +358,18 @@ void stocksDialog::on_sellCrypto_clicked()
             USD_amount-=usd;
             QString sqlquery;
             QSqlQuery update_qry(db);
-            if (USD_amount>0)
-                sqlquery = "UPDATE "+table+" SET cryptoAmount = "+QString::number(rest)+", USD_amount = "+QString::number(USD_amount)+" WHERE symbol='"+crypt+"';";
-            else
-                sqlquery = "DELETE FROM "+table+" WHERE symbol='"+crypt+"';";
-            if (!update_qry.exec(sqlquery)) ui->messages->setText("Error " + update_qry.lastError().text());
+            if (USD_amount>0) {
+                sqlquery = "UPDATE "+table+" SET cryptoAmount = :cryptoAmount, USD_amount = :USD_amount WHERE symbol = :symbol";
+                update_qry.prepare(sqlquery);
+                update_qry.bindValue(":cryptoAmount", rest);
+                update_qry.bindValue(":USD_amount", USD_amount);
+                update_qry.bindValue(":symbol", crypt);
+            } else {
+                sqlquery = "DELETE FROM "+table+" WHERE symbol = :symbol";
+                update_qry.prepare(sqlquery);
+                update_qry.bindValue(":symbol", crypt);
+            }
+            if (!update_qry.exec()) ui->messages->setText("Error " + update_qry.lastError().text());
             else savesettings("balance",balance.toInt()+usd);
             update_qry.finish();
     } else {
@@ -419,7 +435,10 @@ void stocksDialog::on_getCurrentPrices_clicked()
           double proffit=(closePrice-db_buyPrice)*db_amount;
           totalproffit+=proffit;
           QSqlQuery query;
-          query.exec("UPDATE "+table+" SET currentPrice = "+QString::number(closePrice)+" WHERE id = "+QString::number(db_id));
+          query.prepare("UPDATE "+table+" SET currentPrice = :currentPrice WHERE id = :id");
+          query.bindValue(":currentPrice", closePrice);
+          query.bindValue(":id", db_id);
+          query.exec();
       }
     }
       ui->proffit->setText("$"+QString::number(totalproffit, 'F', 3));

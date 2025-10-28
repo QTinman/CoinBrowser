@@ -4,6 +4,7 @@
 #include "settingsdialog.h"
 #include "stocksdialog.h"
 #include "stocks.h"
+#include "constants.h"
 #include <QFile>
 #include <QTextStream>
 #include <QSet>
@@ -21,13 +22,13 @@
 
 QProcess process;
 QString crypt="BTC";
-QString exchange,dbfile="coinhistory.db",dbtable="";
+QString exchange,dbfile=Constants::DB_FILE,dbtable="";
 QDateTime timeroff;
 QSqlDatabase db;
 QTimer *timer;
-int colums=11,coin_from=1,coin_to=1,addsec=1800,cycles=0;
-QString appgroup="coinbrowser";
-double from1h=-2,to1h=5,from24h=0,to24h=100,from7d=-2,to7d=100,btc_price=58338,markedcap_percent,volume_percent_min,volume_percent_max,price_change_from,price_change_to,volum_min,pricemin,pricemax;
+int colums=Constants::DEFAULT_TABLE_COLUMNS,coin_from=Constants::DEFAULT_COIN_FROM,coin_to=Constants::DEFAULT_COIN_TO,addsec=Constants::DEFAULT_AUTO_UPDATE_SECONDS,cycles=0;
+QString appgroup=Constants::APP_GROUP;
+double from1h=Constants::DEFAULT_CHANGE_1H_FROM,to1h=Constants::DEFAULT_CHANGE_1H_TO,from24h=Constants::DEFAULT_CHANGE_24H_FROM,to24h=Constants::DEFAULT_CHANGE_24H_TO,from7d=Constants::DEFAULT_CHANGE_7D_FROM,to7d=Constants::DEFAULT_CHANGE_7D_TO,btc_price=Constants::DEFAULT_BTC_PRICE,markedcap_percent,volume_percent_min,volume_percent_max,price_change_from,price_change_to,volum_min,pricemin,pricemax;
 bool change_1h,change_24h,change_7d,volume,marked_cap,use_volume,show_only_blacklisted,change_price,create_db=false,pricefilter,volume_min_check ,timeupdatedb=false;
 
 
@@ -65,11 +66,11 @@ MainWindow::MainWindow(QWidget *parent)
     manager = new QNetworkAccessManager(this);
     bool autoupdatejson=loadsettings("autoupdatejson").toBool();
     int autojsonmin=loadsettings("autojsonmin").toInt();
-    if (autojsonmin == 0) autojsonmin=60;
+    if (autojsonmin == 0) autojsonmin=Constants::DEFAULT_UPDATE_INTERVAL_MINUTES;
     //qDebug() << autojsonmin << " " << autoupdatejson << " " << timer->interval() << " " << timer->isActive() << " " << timer->isSingleShot() << " " << timer->interval();
     if (!timer->isActive()) {
         connect(timer, SIGNAL(timeout()), this, SLOT(reload_model()));
-        if (autoupdatejson) timer->start(autojsonmin*60000);
+        if (autoupdatejson) timer->start(autojsonmin*Constants::MILLISECONDS_PER_MINUTE);
     }
     QTime ct=QTime::currentTime().addMSecs(timer->remainingTime());
     timeroff=QDateTime::currentDateTime().addMSecs(timer->remainingTime());
@@ -483,9 +484,20 @@ QStringList MainWindow::initializemodel()
                 if (create_db) {
 
                     QSqlQuery insert_qry(db);
-                    sqlquery = "INSERT INTO "+dbtable+" (id,symbol,name,price,volume_24h,percent_change_1h,percent_change_24h,percent_change_7d,market_cap,last_updated) VALUES ("+QString::number(id)+", '"+symbol+"', '"+name+"', "+QString::number(price)+", "+QString::number(volume_24h)+", "+QString::number(percent_change_1h)+", "+QString::number(percent_change_24h)+", "+QString::number(percent_change_7d)+", "+QString::number(market_cap)+", '"+last_updated+"');";
+                    sqlquery = "INSERT INTO "+dbtable+" (id,symbol,name,price,volume_24h,percent_change_1h,percent_change_24h,percent_change_7d,market_cap,last_updated) VALUES (:id, :symbol, :name, :price, :volume_24h, :percent_change_1h, :percent_change_24h, :percent_change_7d, :market_cap, :last_updated)";
+                    insert_qry.prepare(sqlquery);
+                    insert_qry.bindValue(":id", id);
+                    insert_qry.bindValue(":symbol", symbol);
+                    insert_qry.bindValue(":name", name);
+                    insert_qry.bindValue(":price", price);
+                    insert_qry.bindValue(":volume_24h", volume_24h);
+                    insert_qry.bindValue(":percent_change_1h", percent_change_1h);
+                    insert_qry.bindValue(":percent_change_24h", percent_change_24h);
+                    insert_qry.bindValue(":percent_change_7d", percent_change_7d);
+                    insert_qry.bindValue(":market_cap", market_cap);
+                    insert_qry.bindValue(":last_updated", last_updated);
                     //qDebug() << sqlquery;
-                    if (!insert_qry.exec(sqlquery)) qDebug() << "Error " << insert_qry.lastError().text();
+                    if (!insert_qry.exec()) qDebug() << "Error " << insert_qry.lastError().text();
                     insert_qry.finish();
                 }
 
@@ -621,8 +633,8 @@ void MainWindow::reload_model()
        for (col=0;col<colums;col++) {
          index=model->index(row,col,QModelIndex());
          if (col == 0) model->setData(index,modellist[i].toInt());
-         if (col < 4 & col > 0) model->setData(index,modellist[i]);
-         if (col < 9 & col > 2) model->setData(index,modellist[i].toDouble());
+         if (col < 4 && col > 0) model->setData(index,modellist[i]);
+         if (col < 9 && col > 2) model->setData(index,modellist[i].toDouble());
          if (col == 9) model->setData(index,modellist[i].toInt());
          if (col == 10) model->setData(index,modellist[i]);
          model->setData(index, Qt::AlignCenter, Qt::TextAlignmentRole);

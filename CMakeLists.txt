@@ -50,6 +50,11 @@ set(PROJECT_SOURCES
         stocksdialog.ui
         worker.cpp
         worker.h
+        settingsmanager.cpp
+        settingsmanager.h
+        jsonfilemanager.cpp
+        jsonfilemanager.h
+        constants.h
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
