@@ -54,6 +54,8 @@ set(PROJECT_SOURCES
         settingsmanager.h
         jsonfilemanager.cpp
         jsonfilemanager.h
+        pairscachemanager.cpp
+        pairscachemanager.h
         constants.h
 )
 

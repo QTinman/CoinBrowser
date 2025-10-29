@@ -39,6 +39,7 @@ public:
     void initializeModel(QSqlTableModel *sqlmodel);
     QVariant loadsettings(QString settings);
     void savesettings(QString settings, QVariant attr);
+    void clearPairsCache(); // Clear pairs cache to force refresh
     ~MainWindow();
 
 private slots:

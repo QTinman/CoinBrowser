@@ -5,6 +5,7 @@
 #include "stocksdialog.h"
 #include "stocks.h"
 #include "constants.h"
+#include "pairscachemanager.h"
 #include <QFile>
 #include <QTextStream>
 #include <QSet>
@@ -139,6 +140,12 @@ MainWindow::MainWindow(QWidget *parent)
     if (!db.open()) {
          qDebug() << db.lastError();
     }
+
+    // Initialize pairs cache for fast startup
+    if (!PairsCacheManager::instance().initialize(db)) {
+        qDebug() << "Warning: Failed to initialize pairs cache";
+    }
+
     tableage();
     ui->tables->setCurrentIndex(0);
     dbtable=ui->tables->currentText();
@@ -233,6 +240,13 @@ void MainWindow::savesettings(QString settings, QVariant attr)
     appsettings.endGroup();
 }
 
+void MainWindow::clearPairsCache()
+{
+    PairsCacheManager::instance().clearCache(exchange);
+    ui->messages->setText("Pairs cache cleared for " + exchange + ". Will refresh on next load.");
+    qDebug() << "Pairs cache cleared for" << exchange;
+}
+
 void MainWindow::initializeModel(QSqlTableModel *sqlmodel)
 {
     sqlmodel->setTable(dbtable);
@@ -298,10 +312,7 @@ void MainWindow::createdb()
 }
 QStringList MainWindow::readpairs()
 {
-    QFile filein;
-    QStringList pairs;
-
-    // Convert blacklist to QSet for O(1) lookups
+    // Build combined blacklist from settings
     QSet<QString> blacklist = {"SUSD", "USD", "EUR", "USDC", "BUSD", "GBP", "BNB", "TUSD", "UST"};
 
     QSettings appsettings("QTinman", appgroup);
@@ -310,49 +321,29 @@ QStringList MainWindow::readpairs()
     QSet<QString> blacklist_exchange(blacklistList.begin(), blacklistList.end());
     appsettings.endGroup();
 
-    QStringList bittrexList = loadsettings("bittrex_blacklist").toStringList();
-    QSet<QString> bittrex_blacklist(bittrexList.begin(), bittrexList.end());
+    // Merge all blacklists
+    blacklist.unite(blacklist_exchange);
+    blacklist.insert(crypt); // Don't include the quote currency itself
 
+    // Get path to text file for fallback
     QString cryptolistread = loadsettings("cryptolistread").toString();
     QString filename = cryptolistread + "/raw_" + exchange.toLower() + ".txt";
 
-    filein.setFileName(filename);
-    if (!filein.open(QIODevice::ReadOnly)) {
-        ui->messages->setText(filename + " not found, create with freqtrade list-pairs --exchange " + exchange.toLower() + " > raw_" + exchange.toLower() + ".txt");
-        return pairs;
+    // Use cache for instant pair loading!
+    // This replaces slow file parsing with indexed SQLite queries
+    QStringList pairs = PairsCacheManager::instance().getPairs(
+        exchange,
+        crypt,
+        blacklist,
+        filename
+    );
+
+    if (pairs.isEmpty()) {
+        ui->messages->setText(filename + " not found or empty. Create with: freqtrade list-pairs --exchange " + exchange.toLower() + " > raw_" + exchange.toLower() + ".txt");
+    } else {
+        QString cacheInfo = PairsCacheManager::instance().getCacheStats(exchange);
+        ui->messages->setText("Pairs found for " + exchange + ": " + QString::number(pairs.size()) + " (" + cacheInfo + ")");
     }
-
-    QTextStream in(&filein);
-    int added = 0;
-
-    while (!in.atEnd())
-    {
-        QString content = in.readLine();
-
-        // Find the first "/" after position 10
-        int middle = content.indexOf("/", 10);
-        if (middle == -1) continue; // Skip invalid lines
-
-        int start = content.lastIndexOf(" ", middle);
-        int end = content.indexOf(" ", middle);
-
-        if (start == -1 || end == -1) continue; // Invalid format
-
-        QStringView par1 = QStringView(content).mid(start + 1, middle - start - 1);
-        QStringView par2 = QStringView(content).mid(middle + 1, end - middle - 1);
-
-        // Check blacklists using QSet for fast lookups
-        if (blacklist.contains(par1.toString()) || blacklist_exchange.contains(par1.toString()) || crypt == par1)
-            continue;
-
-        if (crypt == par2) {
-            pairs.append(par1.toString());  // Convert QStringView to QString
-            added++;
-        }
-    }
-
-    filein.close();
-    ui->messages->setText("Pairs found for " + exchange + " " + QString::number(added));
 
     return pairs;
 }
