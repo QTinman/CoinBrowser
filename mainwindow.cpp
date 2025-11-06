@@ -161,6 +161,10 @@ MainWindow::MainWindow(QWidget *parent)
     //QModelIndex index;
 
     connect(manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(replyFinished(QNetworkReply*)));
+
+    // Initialize exchange API (will be created dynamically based on selected exchange)
+    exchangeAPI = nullptr;
+
     model = new QStandardItemModel(modellist.length()/colums,colums,this);
     connect(ui->search,SIGNAL(textEdited(const QString &)),this,SLOT(searchmodel(const QString&)));
     reload_model();
@@ -547,19 +551,53 @@ QStringList MainWindow::initializemodel()
         if (pairs.count() > 0 && jsonArray.count() > 0) ui->messages->setText("Database is from "+QString::number(db_date)+"/"+QString::number(db_mo)+", time "+QString::number(db_h,'G',2)+":"+QString::number(db_min).rightJustified(2,'0'));
         csv_file.close();
         create_db = false;
-        if (((timeupdatedb && autoupdatejson) || ui->actionUpdateJson->isChecked()) && !apikey.isEmpty()) {
+        if ((timeupdatedb && autoupdatejson) || ui->actionUpdateJson->isChecked()) {
             timeupdatedb=false;
-            QString crypto=crypt;
             ui->actionUpdateJson->setChecked(false);
             if (autoupdatejson) autoupdatejson = false;
-            if (crypto.contains("USD")) crypto="USD";
-            QString query = QString("start=1&limit=5000&convert="+crypto);
-            QUrl url = QUrl(QString("https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?%1").arg(query));
-            QNetworkRequest request(url);
-            request.setRawHeader("Accept", "application/json");
-            request.setRawHeader("X-CMC_PRO_API_KEY", apikey.toUtf8());
-            manager->get(request);
-        } else if (apikey.isEmpty()) ui->messages->setText("API key missing, please insert API key in settings.");
+
+            // Check if we should use exchange API or CoinMarketCap
+            bool useExchangeAPI = loadsettings("use_exchange_api").toBool();
+
+            if (useExchangeAPI && ExchangeAPIFactory::isSupported(exchange)) {
+                // Use direct exchange API (no API key needed!)
+                ui->messages->setText("Fetching data from " + exchange + " API...");
+
+                // Clean up old exchange API if exists
+                if (exchangeAPI) {
+                    exchangeAPI->deleteLater();
+                }
+
+                // Create new exchange API instance
+                exchangeAPI = ExchangeAPIFactory::createAPI(exchange, this);
+                if (exchangeAPI) {
+                    connect(exchangeAPI, &ExchangeAPI::tickersReceived,
+                            this, &MainWindow::onExchangeTickersReceived);
+                    connect(exchangeAPI, &ExchangeAPI::errorOccurred,
+                            this, &MainWindow::onExchangeAPIError);
+
+                    // Fetch tickers for current quote currency
+                    QString quoteCurrency = crypt;
+                    QStringList pairsList = pairs;
+                    exchangeAPI->fetchTickers(quoteCurrency, pairsList);
+                } else {
+                    ui->messages->setText("Exchange API not available for " + exchange);
+                }
+            } else if (!apikey.isEmpty()) {
+                // Fall back to CoinMarketCap API
+                QString crypto=crypt;
+                if (crypto.contains("USD")) crypto="USD";
+                QString query = QString("start=1&limit=5000&convert="+crypto);
+                QUrl url = QUrl(QString("https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?%1").arg(query));
+                QNetworkRequest request(url);
+                request.setRawHeader("Accept", "application/json");
+                request.setRawHeader("X-CMC_PRO_API_KEY", apikey.toUtf8());
+                manager->get(request);
+                ui->messages->setText("Fetching data from CoinMarketCap API...");
+            } else {
+                ui->messages->setText("Enable 'Use Exchange API' in settings or provide CoinMarketCap API key.");
+            }
+        }
         if (pairs.count() > 0 && jsonArray.count() > 0 && !apikey.isEmpty()) ui->messages->setText(ui->messages->text()+", Found and added to list "+QString::number(coininlist) + " / Winner: " + top_symbol + "  " + QString::number(top_1h) + "% / Looser: " + bottom_symbol + "  " + QString::number(bottom_1h)+"%");
         return modeldatalist;
 }
@@ -708,6 +746,52 @@ void MainWindow::replyFinished (QNetworkReply *reply)
     }
 
     reply->deleteLater();
+}
+
+void MainWindow::onExchangeTickersReceived(const QJsonArray& data)
+{
+    // Save exchange API data to JSON file (same format as CoinMarketCap)
+    QString path = loadsettings("json_path").toString();
+    if (path.isEmpty()) path = ".";
+
+    QString filename = path + "/crypto_" + crypt + ".json";
+
+    // Wrap data in CMC-compatible structure
+    QJsonObject root;
+    root["data"] = data;
+    root["status"] = QJsonObject{
+        {"timestamp", QDateTime::currentDateTime().toString(Qt::ISODate)},
+        {"error_code", 0},
+        {"error_message", QJsonValue::Null},
+        {"elapsed", 0},
+        {"credit_count", 0}
+    };
+
+    QJsonDocument doc(root);
+    QFile file(filename);
+
+    if (file.open(QFile::WriteOnly)) {
+        file.write(doc.toJson());
+        file.flush();
+        file.close();
+
+        ui->messages->setText("Successfully fetched " + QString::number(data.size()) +
+                            " tickers from " + exchange + " API");
+
+        // Reload model to show new data
+        if (timer->isActive()) {
+            reload_model();
+        }
+    } else {
+        ui->messages->setText("Error: Could not save data to " + filename);
+        qDebug() << "Failed to open file for writing:" << filename;
+    }
+}
+
+void MainWindow::onExchangeAPIError(const QString& error)
+{
+    ui->messages->setText("Exchange API Error: " + error);
+    qDebug() << "Exchange API Error:" << error;
 }
 
 

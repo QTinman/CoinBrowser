@@ -13,6 +13,7 @@
 #include <QNetworkRequest>
 #include <QNetworkReply>
 #include <QUrl>
+#include "exchangeapi.h"
 //#include <QtQml/QQmlEngine>
 
 extern QSqlDatabase db;
@@ -51,6 +52,8 @@ private slots:
     void calc_profit();
     void on_actionUpdateJson_changed();
     void replyFinished (QNetworkReply *reply);
+    void onExchangeTickersReceived(const QJsonArray& data);
+    void onExchangeAPIError(const QString& error);
     void on_tables_activated(int index);
 
     void on_fileButton_clicked();
@@ -68,5 +71,6 @@ private:
     QSqlTableModel * sqlmodel;
     QStandardItemModel *model;
     QNetworkAccessManager *manager;
+    ExchangeAPI *exchangeAPI;
 };
 #endif // MAINWINDOW_H

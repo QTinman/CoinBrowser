@@ -56,6 +56,8 @@ set(PROJECT_SOURCES
         jsonfilemanager.h
         pairscachemanager.cpp
         pairscachemanager.h
+        exchangeapi.cpp
+        exchangeapi.h
         constants.h
 )
 
