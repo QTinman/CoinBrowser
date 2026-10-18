@@ -184,10 +184,12 @@ void settingsDialog::on_buttonBox_accepted()
     savesettings("cryptoInvestFile",ui->cryptoInvestFile->text());
     savesettings("balance",ui->balance->value());
     if ((ui->autoupdatejson->isChecked() && !timeractive) || (timerinteval != ui->autojsonmin->value() && ui->autoupdatejson->isChecked())) {
-        timer->setInterval(ui->autojsonmin->value()*60000);
-        //timer->stop();
-        //timer->start(ui->autojsonmin->value()*60000);
-        qDebug() << timer->remainingTime();
+        // start(), not setInterval(). setInterval on a stopped timer sets the
+        // period and leaves it stopped, so ticking Auto upd. here did nothing
+        // until the program was restarted - the constructor was the only place
+        // that ever started it. start() also restarts a running timer on the
+        // new period, which is what changing the interval is asking for.
+        timer->start(ui->autojsonmin->value()*60000);
     }
     if (!ui->autoupdatejson->isChecked() && timeractive) timer->stop();
     savesettings("tableage",ui->tableage->value());
