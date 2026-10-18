@@ -22,18 +22,7 @@ stocksDialog::stocksDialog(QWidget *parent) :
     if (!db.open()) ui->messages->setText("Error " + db.lastError().text());
     if (!db.tables().contains(table)) createTable(table);
 
-    // No cash and nothing held is a simulator that cannot do anything, so it
-    // is not a state worth preserving - stake it with 1000. Checked against
-    // the portfolio rather than against the setting existing, because an
-    // install that has been through Settings once already has balance stored
-    // as 0 and would otherwise stay stuck there.
-    if (loadsettings("balance").toDouble() <= 0) {
-        QSqlQuery held(db);
-        int rows = 0;
-        if (held.exec("SELECT COUNT(*) FROM \""+table+"\"") && held.next())
-            rows = held.value(0).toInt();
-        if (rows == 0) savesettings("balance",1000);
-    }
+    savesettings("balance", stakedBalance(loadsettings("balance").toInt()));
     ui->balance->setText("$"+loadsettings("balance").toString());
     manager = new QNetworkAccessManager(this);
     connect(manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(replyFinished(QNetworkReply*)));

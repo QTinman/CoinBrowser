@@ -58,7 +58,9 @@ settingsDialog::settingsDialog(QWidget *parent) :
     bool autoupdatejson=loadsettings("autoupdatejson").toBool();
     timeractive=autoupdatejson;
     ui->cryptoInvestFile->setText(loadsettings("cryptoInvestFile").toString());
-    ui->balance->setValue(loadsettings("balance").toInt());
+    // Shows 1000 rather than 0 on a simulator that has never been staked,
+    // so the default is visible where the balance is set.
+    ui->balance->setValue(stakedBalance(loadsettings("balance").toInt()));
     ui->autoupdatejson->setChecked(autoupdatejson);
     int tableage = loadsettings("tableage").toInt();
     if (tableage == 0) {

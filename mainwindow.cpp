@@ -25,6 +25,18 @@ double from1h=-2,to1h=5,from24h=0,to24h=100,from7d=-2,to7d=100,btc_price=58338,m
 bool change_1h,change_24h,change_7d,volume,marked_cap,use_volume,show_only_blacklisted,change_price,create_db=false,pricefilter,volume_min_check ,timeupdatedb=false;
 
 
+int stakedBalance(int stored)
+{
+    if (stored > 0) return stored;
+    QSqlQuery held(db);
+    int rows = 0;
+    // A missing table means a simulator never used, which is exactly the case
+    // that wants staking - exec fails, rows stays 0, and 1000 comes back.
+    if (held.exec("SELECT COUNT(*) FROM \"cryptoInvest\"") && held.next())
+        rows = held.value(0).toInt();
+    return rows == 0 ? 1000 : stored;
+}
+
 QJsonArray MainWindow::ReadJson(const QString &path)
 {
     QFile file( path );
@@ -125,9 +137,6 @@ MainWindow::MainWindow(QWidget *parent)
     if (cryptolistread == "") savesettings("cryptolistread",pwd);
     QString reportPath = loadsettings("reportpath").toString();
     if (reportPath == "") savesettings("reportpath",pwd);
-    // isValid(), not the value: a simulator balance spent down to nothing is a
-    // real 0 and must not be topped back up to 1000 on the next start.
-    if (!loadsettings("balance").isValid()) savesettings("balance",1000);
     for ( const auto& i : exchanges  ) {
       QString stake = loadsettings(i.toLower()+"_stake").toString();
       if (stake == "") {

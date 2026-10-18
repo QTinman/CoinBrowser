@@ -24,6 +24,12 @@ struct PrevRow {
     QString last_updated;
 };
 
+// The simulator's starting stake, in one place so Settings and the simulator
+// cannot disagree about it. 1000 when there is nothing to protect - no cash
+// and no holdings. A balance spent to zero while coins are still held is a
+// real position and comes back unchanged.
+int stakedBalance(int stored);
+
 extern QSqlDatabase db;
 extern QTimer *timer;
 extern QString exchange, appgroup,crypt;
