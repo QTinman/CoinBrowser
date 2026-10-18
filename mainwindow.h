@@ -54,6 +54,7 @@ public:
     // What the Table dropdown shows for a table: when it was written, in
     // the local convention. The table name travels as the item's data.
     QString tableLabel(const QString &table);
+    QDateTime tableMade(const QString &table);
     void initializeModel(QSqlTableModel *sqlmodel);
     QVariant loadsettings(QString settings);
     void savesettings(QString settings, QVariant attr);

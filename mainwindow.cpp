@@ -331,6 +331,7 @@ void MainWindow::tableage()
     int tableage = loadsettings("tableage").toInt();
     if (tableage == 0) tableage = 999;
     ui->tables->clear();
+    QStringList recent;
     QDateTime cdt = QDateTime::currentDateTime();
     QDate cd = QDate::currentDate();
     for ( const auto& i : db.tables()  ) if (i.contains(crypt+"_")) {
@@ -353,20 +354,47 @@ void MainWindow::tableage()
         //qDebug() << cdt.addSecs(-tableage*3600) << " " << cdttable;
         if (cdt.addSecs(-(tableage*3600)) < cdttable) {
 
-            ui->tables->addItem(tableLabel(i), i);
+            recent << i;
         }
     }
+    // Newest first, so index 0 is the most recent snapshot. It used to be the
+    // oldest, which is what every comparison column was measured against.
+    std::sort(recent.begin(), recent.end(), [this](const QString &a, const QString &b){
+        return tableMade(a) > tableMade(b);
+    });
+    for (const QString &i : recent) ui->tables->addItem(tableLabel(i), i);
     ui->tables->setCurrentIndex(0);
+}
+
+// When a table was made, read out of its own name: <stake>_<d>?<m>_<h>?<min>,
+// where ? is a non-breaking hyphen. The name carries no year, so this year is
+// assumed and the previous one used if that would put the table in the future.
+QDateTime MainWindow::tableMade(const QString &table)
+{
+    static const QRegularExpression re(R"(^[^_]+_(\d+)\D(\d+)_(\d+)\D(\d+)$)");
+    const QRegularExpressionMatch m = re.match(table);
+    if (!m.hasMatch()) return QDateTime();
+    const QDate d(QDate::currentDate().year(), m.captured(2).toInt(), m.captured(1).toInt());
+    if (!d.isValid()) return QDateTime();
+    QDateTime made(d, QTime(m.captured(3).toInt(), m.captured(4).toInt()));
+    if (made > QDateTime::currentDateTime().addDays(1))
+        made = QDateTime(d.addYears(-1), made.time());
+    return made;
 }
 
 QString MainWindow::tableLabel(const QString &table)
 {
+    // The creation time, not the time inside the rows. Those differ - a reload
+    // writes a new table from a json fetched earlier - and labelling by the
+    // data gave two tables the same caption, with no way to tell them apart.
+    const QDateTime made = tableMade(table);
+    QString label = made.isValid() ? localStamp(made) : table;
+    // An empty table is the one thing a date cannot explain. These are left
+    // over from a run that created a table and then wrote nothing to it.
     QSqlQuery q(db);
-    if (q.exec("SELECT last_updated FROM \""+table+"\" LIMIT 1") && q.next()) {
-        const QDateTime dt = stampOf(q.value(0).toString());
-        if (dt.isValid()) return localStamp(dt);
-    }
-    return table;        // nothing written yet, or a stamp we cannot read
+    if (!(q.exec("SELECT 1 FROM \""+table+"\" LIMIT 1") && q.next()))
+        label += "  (empty)";
+    return label;
 }
 
 void MainWindow::createdb()
@@ -766,8 +794,13 @@ void MainWindow::combo_refresh(int comboindex)
     crypt = loadsettings(exchange.toLower() + "_stake").toString();
     exchangeFetchTried = false;   // a different exchange is worth asking again
     ui->tables->clear();
-    for ( const auto& i : db.tables()  ) if (i.contains(crypt+"_")) ui->tables->addItem(tableLabel(i), i);
-    ui->tables->setCurrentIndex(ui->tables->count()-1);
+    QStringList found;
+    for ( const auto& i : db.tables()  ) if (i.contains(crypt+"_")) found << i;
+    std::sort(found.begin(), found.end(), [this](const QString &a, const QString &b){
+        return tableMade(a) > tableMade(b);
+    });
+    for (const QString &i : found) ui->tables->addItem(tableLabel(i), i);
+    ui->tables->setCurrentIndex(0);   // newest, as everywhere else
     dbtable=ui->tables->currentData().toString();
     if (dbtable=="") createdb();
     this->setWindowTitle("Cryptocurrency tool for Freqtrade, active stake coin "+crypt);
