@@ -132,6 +132,15 @@ MainWindow::MainWindow(QWidget *parent)
     if (!db.open()) {
          qDebug() << db.lastError();
     }
+    // Write-ahead logging, and only sync at checkpoints rather than on every
+    // commit. Costs nothing here - the database is a local cache that can be
+    // rebuilt from the exchange at any time - and takes a large bite out of
+    // the time an update spends waiting on the disk.
+    {
+        QSqlQuery pragma(db);
+        pragma.exec("PRAGMA journal_mode=WAL");
+        pragma.exec("PRAGMA synchronous=NORMAL");
+    }
     tableage();
     ui->tables->setCurrentIndex(0);
     dbtable=ui->tables->currentText();
@@ -283,9 +292,11 @@ void MainWindow::createdb()
           "market_cap real, "
           "last_updated varchar(25))";
     qDebug() << "Creating database, please wait...";
-    if (!db.open()) qDebug() << "Error " << db.lastError().text();
     QSqlQuery qry(db);
     if (!qry.exec(createTables)) ui->label->setText("Error "+qry.lastError().text());
+    // Coins are looked up by name, never by id. Without this the lookup is a
+    // full table scan.
+    qry.exec("CREATE INDEX IF NOT EXISTS \"idx_"+dbtable+"_name\" ON \""+dbtable+"\"(name)");
     qry.finish();
     create_db=true;
 }
@@ -358,8 +369,10 @@ QStringList MainWindow::initializemodel()
         QDateTime cdt = QDateTime::currentDateTime();
         QSqlRecord record;
         QFile csv_file;
-        QString db_symbol,db_name, symbol,db_last_updated,sqlquery="";
-        double db_volume_24h=0,db_percent_change_1h,db_market_cap=0,db_price=0;
+        QString db_symbol,db_name, symbol,db_last_updated;
+        // db_percent_change_1h had no initialiser and was only assigned when a
+        // previous row was found, then written into the CSV report regardless.
+        double db_volume_24h=0,db_percent_change_1h=0,db_market_cap=0,db_price=0;
         int json_year,json_mo,json_date,json_h, db_year,db_mo,db_date,db_h,db_min;
         //ui->messages->setText("Please wait.....");
         bool report=loadsettings("report").toBool();
@@ -381,18 +394,57 @@ QStringList MainWindow::initializemodel()
         QString apikey = loadsettings("apikey").toString(), top_symbol="",bottom_symbol="";
         bool autoupdatejson=loadsettings("autoupdatejson").toBool();
         dbtable=ui->tables->currentText();
+        // The table to compare against. createdb() below points dbtable at a
+        // brand new empty table, so the previous one has to be remembered here
+        // or every lookup in the loop finds nothing and the comparison columns
+        // are all computed against zero.
+        QString prevtable = dbtable;
         if ((timeupdatedb && autoupdatejson) || ui->actionUpdateJson->isChecked()) {
             create_db=true;
             cycles++;
-            if (!db.open()) qDebug() << "Error: " << db.lastError().text();
             ui->actionUpdateDB->setChecked(false);
             createdb();
         }
         coin_to = ui->cointo->value();
         coin_from = ui->coinfrom->value();
 
+        // One query instead of one per coin. The old code ran
+        // "SELECT * FROM t WHERE name=:name" inside the loop against a table
+        // whose only index is its primary key - a full scan every time, so
+        // 5000 coins meant 5000 scans of up to 5000 rows each.
+        QHash<QString, PrevRow> prev;
+        if (!prevtable.isEmpty()) {
+            QSqlQuery prevqry(db);
+            if (prevqry.exec("SELECT id,symbol,name,price,volume_24h,percent_change_1h,"
+                             "market_cap,last_updated FROM \""+prevtable+"\"")) {
+                while (prevqry.next()) {
+                    PrevRow r;
+                    r.id                = prevqry.value(0).toInt();
+                    r.symbol            = prevqry.value(1).toString();
+                    r.price             = prevqry.value(3).toDouble();
+                    r.volume_24h        = prevqry.value(4).toDouble();
+                    r.percent_change_1h = prevqry.value(5).toDouble();
+                    r.market_cap        = prevqry.value(6).toDouble();
+                    r.last_updated      = prevqry.value(7).toString();
+                    prev.insert(prevqry.value(2).toString(), r);
+                }
+            } else qDebug() << "Error reading previous table:" << prevqry.lastError().text();
+        }
+
         btc_price = loadsettings(exchange.toLower()+"_stake_coin_price").toDouble();
         QJsonArray jsonArray = ReadJson(path+"/crypto_"+crypt+".json");
+
+        // One transaction for the whole insert run. Without it SQLite commits
+        // and fsyncs each row on its own, which is what made an update take
+        // minutes: 5000 rows meant 5000 separate disk syncs.
+        QSqlQuery insert_qry(db);
+        if (create_db) {
+            if (!db.transaction()) qDebug() << "No transaction:" << db.lastError().text();
+            if (!insert_qry.prepare("INSERT INTO \""+dbtable+"\" (id,symbol,name,price,volume_24h,"
+                                    "percent_change_1h,percent_change_24h,percent_change_7d,"
+                                    "market_cap,last_updated) VALUES (?,?,?,?,?,?,?,?,?,?)"))
+                qDebug() << "Insert prepare failed:" << insert_qry.lastError().text();
+        }
 
         foreach (const QJsonValue & value, jsonArray) {
 
@@ -415,27 +467,24 @@ QStringList MainWindow::initializemodel()
                 QString last_updated = coin["last_updated"].toString();
 
                 double market_cap = coin["market_cap"].toDouble();
-                if (!db.open()) qDebug() << "Error " << db.lastError().text();
 
-                QSqlQuery qry(db);
-                sqlquery = "SELECT * FROM "+dbtable+" WHERE name=:name;";
-                if (!qry.prepare(sqlquery)) {
-                  qDebug() << "prepare failed\n";
-                }
-                qry.bindValue(":name",name);
-
-                if (qry.exec()) {
-                  if (qry.next()) {
-                    db_id = qry.value(0).toInt();
-                    db_symbol = qry.value(1).toString();
-                    db_name = qry.value(2).toString();
-                    db_price = qry.value(3).toDouble();
-                    db_volume_24h = qry.value(4).toDouble();
-                    db_percent_change_1h = qry.value(5).toDouble();
-                    db_market_cap = qry.value(8).toDouble();
-                    db_last_updated = qry.value(9).toString();
-
-                  }
+                // Previous values for this coin, from the hash built once above.
+                // Cleared each time round: leaving the last coin's values in
+                // place is how a coin missing from the previous table used to
+                // be compared against whichever coin came before it.
+                db_id = 0; db_symbol.clear(); db_name.clear();
+                db_price = 0; db_volume_24h = 0; db_percent_change_1h = 0;
+                db_market_cap = 0; db_last_updated.clear();
+                QHash<QString, PrevRow>::const_iterator pit = prev.constFind(name);
+                if (pit != prev.constEnd()) {
+                    db_id                = pit->id;
+                    db_symbol            = pit->symbol;
+                    db_name              = name;
+                    db_price             = pit->price;
+                    db_volume_24h        = pit->volume_24h;
+                    db_percent_change_1h = pit->percent_change_1h;
+                    db_market_cap        = pit->market_cap;
+                    db_last_updated      = pit->last_updated;
                 }
                 QString last_updated_time = db_last_updated.mid(11,5)+"/"+last_updated.mid(11,5);
                 json_year = last_updated.mid(0,4).toInt();
@@ -454,7 +503,10 @@ QStringList MainWindow::initializemodel()
                 QDate db_d(db_year,db_mo,db_date);
                 QDateTime lastdbupdate(db_d,QTime(db_h,db_min));
 
-                price_change=(price/db_price*100)-100;
+                // db_price is 0 for a coin with no previous row - every coin,
+                // on the run that creates the table. Dividing gave inf, which
+                // then sorted and filtered as if it were a real number.
+                price_change = (db_price > 0) ? (price/db_price*100)-100 : 0;
                 if (db_last_updated == last_updated || symbol != db_symbol) price_change=0;
                 if (top_1h<percent_change_1h) {
                     top_1h = percent_change_1h;
@@ -466,19 +518,24 @@ QStringList MainWindow::initializemodel()
                 }
                 if ((json_date > db_date || (json_date == db_date && json_h >= db_h+10)) && symbol == "ETH") ui->messages->setText("DB is over 10h old! From " +QString::number(db_date,'g',2)+"/"+QString::number(db_mo)+", time "+QString::number(db_h)+":"+QString::number(db_min));
 
-                if (!db.open())
-                     qDebug() << db.lastError();
-
                 if (create_db) {
-
-                    QSqlQuery insert_qry(db);
-                    sqlquery = "INSERT INTO "+dbtable+" (id,symbol,name,price,volume_24h,percent_change_1h,percent_change_24h,percent_change_7d,market_cap,last_updated) VALUES ("+QString::number(id)+", '"+symbol+"', '"+name+"', "+QString::number(price)+", "+QString::number(volume_24h)+", "+QString::number(percent_change_1h)+", "+QString::number(percent_change_24h)+", "+QString::number(percent_change_7d)+", "+QString::number(market_cap)+", '"+last_updated+"');";
-                    //qDebug() << sqlquery;
-                    if (!insert_qry.exec(sqlquery)) qDebug() << "Error " << insert_qry.lastError().text();
-                    insert_qry.finish();
+                    // Bound, not concatenated. The old string-built INSERT put
+                    // the name between single quotes, so any coin named with an
+                    // apostrophe produced a syntax error and was dropped.
+                    insert_qry.addBindValue(id);
+                    insert_qry.addBindValue(symbol);
+                    insert_qry.addBindValue(name);
+                    insert_qry.addBindValue(price);
+                    insert_qry.addBindValue(volume_24h);
+                    insert_qry.addBindValue(percent_change_1h);
+                    insert_qry.addBindValue(percent_change_24h);
+                    insert_qry.addBindValue(percent_change_7d);
+                    insert_qry.addBindValue(market_cap);
+                    insert_qry.addBindValue(last_updated);
+                    if (!insert_qry.exec()) qDebug() << "Error " << insert_qry.lastError().text();
                 }
 
-                percent = (volume_24h/db_volume_24h)*100;
+                percent = (db_volume_24h > 0) ? (volume_24h/db_volume_24h)*100 : 0;
                 if (crypt.contains("USD")) volume_24h = volume_24h/1000000;
                 if ( db_market_cap < market_cap && marked_cap) marked_cap_ok = true;
                 else if (!marked_cap) marked_cap_ok = true;
@@ -531,6 +588,12 @@ QStringList MainWindow::initializemodel()
         }
         if (jsonArray.count() == 0) ui->messages->setText("Json file not found, please update json file");
         if (pairs.count() > 0 && jsonArray.count() > 0) ui->messages->setText("Database is from "+QString::number(db_date)+"/"+QString::number(db_mo)+", time "+QString::number(db_h,'G',2)+":"+QString::number(db_min).rightJustified(2,'0'));
+        // Close the transaction opened before the loop. Everything the run
+        // inserted reaches disk here, in one commit.
+        if (create_db && !db.commit()) {
+            qDebug() << "Commit failed:" << db.lastError().text();
+            db.rollback();
+        }
         csv_file.close();
         create_db = false;
         if (((timeupdatedb && autoupdatejson) || ui->actionUpdateJson->isChecked()) && !apikey.isEmpty()) {

@@ -15,6 +15,15 @@
 #include <QUrl>
 //#include <QtQml/QQmlEngine>
 
+// One row of the previous run's table, kept in a hash so the update loop can
+// look a coin up without querying the database once per coin.
+struct PrevRow {
+    int id = 0;
+    QString symbol;
+    double price = 0, volume_24h = 0, percent_change_1h = 0, market_cap = 0;
+    QString last_updated;
+};
+
 extern QSqlDatabase db;
 extern QTimer *timer;
 extern QString exchange, appgroup,crypt;
