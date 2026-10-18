@@ -57,6 +57,11 @@ MainWindow::MainWindow(QWidget *parent)
     //calc_profit();
     timer = new QTimer(this);
     manager = new QNetworkAccessManager(this);
+    // Connected here, not after the first initializemodel() call below. That
+    // call can now ask the exchange for prices, and a reply that arrives with
+    // nothing connected to it is simply lost - leaving the window empty with
+    // no way to notice why.
+    connect(manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(replyFinished(QNetworkReply*)));
     bool autoupdatejson=loadsettings("autoupdatejson").toBool();
     int autojsonmin=loadsettings("autojsonmin").toInt();
     if (autojsonmin == 0) autojsonmin=60;
@@ -155,7 +160,6 @@ MainWindow::MainWindow(QWidget *parent)
     QStringList modellist = initializemodel();
     //QModelIndex index;
 
-    connect(manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(replyFinished(QNetworkReply*)));
     model = new QStandardItemModel(modellist.length()/colums,colums,this);
     connect(ui->search,SIGNAL(textEdited(const QString &)),this,SLOT(searchmodel(const QString&)));
     reload_model();
@@ -391,7 +395,7 @@ QStringList MainWindow::initializemodel()
         QString path = loadsettings("json_path").toString();
         if (path =="") path="./crypto_"+stake+".json";
         int rowsintable = loadsettings("rowsintable").toInt(), top_1h=0, bottom_1h=0;
-        QString apikey = loadsettings("apikey").toString(), top_symbol="",bottom_symbol="";
+        QString top_symbol="",bottom_symbol="";
         bool autoupdatejson=loadsettings("autoupdatejson").toBool();
         dbtable=ui->tables->currentText();
         // The table to compare against. createdb() below points dbtable at a
@@ -596,20 +600,25 @@ QStringList MainWindow::initializemodel()
         }
         csv_file.close();
         create_db = false;
-        if (((timeupdatedb && autoupdatejson) || ui->actionUpdateJson->isChecked()) && !apikey.isEmpty()) {
+        if ((timeupdatedb && autoupdatejson) || ui->actionUpdateJson->isChecked()) {
             timeupdatedb=false;
-            QString crypto=crypt;
             ui->actionUpdateJson->setChecked(false);
             if (autoupdatejson) autoupdatejson = false;
-            if (crypto.contains("USD")) crypto="USD";
-            QString query = QString("start=1&limit=5000&convert="+crypto);
-            QUrl url = QUrl(QString("https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?%1").arg(query));
-            QNetworkRequest request(url);
-            request.setRawHeader("Accept", "application/json");
-            request.setRawHeader("X-CMC_PRO_API_KEY", apikey.toUtf8());
-            manager->get(request);
-        } else if (apikey.isEmpty()) ui->messages->setText("API key missing, please insert API key in settings.");
-        if (pairs.count() > 0 && jsonArray.count() > 0 && !apikey.isEmpty()) ui->messages->setText(ui->messages->text()+", Found and added to list "+QString::number(coininlist) + " / Winner: " + top_symbol + "  " + QString::number(top_1h) + "% / Looser: " + bottom_symbol + "  " + QString::number(bottom_1h)+"%");
+            fetchFromExchange();
+        } else if (jsonArray.count() == 0 && !exchangeFetchTried) {
+            // Nothing to show and no data file. Rather than sit empty telling
+            // the user to go and find an API key, ask the exchange they have
+            // already selected - no key needed, and it is the exchange whose
+            // pairs they are about to trade.
+            //
+            // Once only. The reply calls reload_model, which lands back here,
+            // and an exchange that returns nothing we can use would otherwise
+            // have us asking it forever. Reset when the user picks a different
+            // exchange or asks for an update.
+            exchangeFetchTried = true;
+            fetchFromExchange();
+        }
+        if (pairs.count() > 0 && jsonArray.count() > 0) ui->messages->setText(ui->messages->text()+", Found and added to list "+QString::number(coininlist) + " / Winner: " + top_symbol + "  " + QString::number(top_1h) + "% / Looser: " + bottom_symbol + "  " + QString::number(bottom_1h)+"%");
         return modeldatalist;
 }
 
@@ -619,6 +628,7 @@ void MainWindow::combo_refresh(int comboindex)
 {
     exchange = ui->comboBox->currentText();
     crypt = loadsettings(exchange.toLower() + "_stake").toString();
+    exchangeFetchTried = false;   // a different exchange is worth asking again
     ui->tables->clear();
     for ( const auto& i : db.tables()  ) if (i.contains(crypt+"_")) ui->tables->addItem(i);
     ui->tables->setCurrentIndex(ui->tables->count()-1);
@@ -714,10 +724,9 @@ void MainWindow::on_actionUpdateDB_changed()
 
 void MainWindow::on_actionUpdateJson_changed()
 {
-    ui->messages->setText("Json updating...Please wait.");
+    ui->messages->setText("Updating prices, please wait...");
     ui->messages->show();
-    reload_model();
-    ui->messages->setText("Json updated.");
+    exchangeFetchTried = false;   // an explicit Update always asks again
     reload_model();
 }
 
@@ -728,12 +737,146 @@ void MainWindow::on_tables_activated(int index)
     reload_model();
 }
 
+// Ask the selected exchange for every symbol it trades, in one request and
+// with no API key. CoinMarketCap needed a key, charged for it, rate limited
+// it, and reported a price averaged across exchanges rather than the price
+// this exchange would actually fill at.
+void MainWindow::fetchFromExchange()
+{
+    QString ex = exchange.toLower();
+    QUrl url;
+    if (ex == "binance")      url = QUrl("https://api.binance.com/api/v3/ticker/24hr");
+    else if (ex == "kucoin")  url = QUrl("https://api.kucoin.com/api/v1/market/allTickers");
+    else {
+        ui->messages->setText("No exchange source for "+exchange+" yet - Binance and KuCoin are supported.");
+        return;
+    }
+    ui->messages->setText("Fetching prices from "+exchange+"...");
+    QNetworkRequest request(url);
+    request.setRawHeader("Accept", "application/json");
+    manager->get(request);
+}
+
+// Turn an exchange ticker into the shape the rest of the program already
+// reads, so ReadJson and the whole display path stay as they are. Market cap
+// and rank are not something an exchange knows, so they come from CoinGecko,
+// which also needs no key; without it the coins are ranked by turnover.
+// CoinGecko, one page of 250 at a time. Four pages covers the top 1000 by
+// market cap, which is more than any of these exchanges lists against a
+// single stake coin.
+void MainWindow::fetchGeckoPage(int page)
+{
+    QString vs = crypt; if (vs.contains("USD")) vs = "usd";
+    QNetworkRequest gq(QUrl("https://api.coingecko.com/api/v3/coins/markets?vs_currency="
+                            +vs.toLower()+"&order=market_cap_desc&per_page=250&page="
+                            +QString::number(page)+"&price_change_percentage=1h,24h,7d"));
+    gq.setRawHeader("Accept", "application/json");
+    manager->get(gq);
+}
+
+QByteArray MainWindow::exchangeToCmcJson(const QByteArray &tickers, const QJsonArray &gecko)
+{
+    QString stake = crypt;
+    if (stake.contains("USD")) stake = "USD";
+    const QString now = QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs);
+
+    // symbol -> (rank, market cap, 1h, 7d). CoinGecko lists several coins under
+    // one symbol, so the first wins: the response is ordered by market cap.
+    struct Extra { int rank=0; double cap=0, h1=0, d7=0; bool have=false; };
+    QHash<QString, Extra> extra;
+    for (const QJsonValue &v : gecko) {
+        QJsonObject o = v.toObject();
+        QString sym = o["symbol"].toString().toUpper();
+        if (sym.isEmpty() || extra.contains(sym)) continue;
+        Extra e;
+        e.rank = o["market_cap_rank"].toInt();
+        e.cap  = o["market_cap"].toDouble();
+        e.h1   = o["price_change_percentage_1h_in_currency"].toDouble();
+        e.d7   = o["price_change_percentage_7d_in_currency"].toDouble();
+        e.have = true;
+        extra.insert(sym, e);
+    }
+
+    struct Row { QString sym; double price, vol, ch24; };
+    QList<Row> rows;
+    QJsonDocument doc = QJsonDocument::fromJson(tickers);
+
+    if (exchange.compare("binance", Qt::CaseInsensitive) == 0) {
+        for (const QJsonValue &v : doc.array()) {
+            QJsonObject o = v.toObject();
+            QString s = o["symbol"].toString();
+            // The ticker concatenates base and quote with no separator, so the
+            // stake coin is the suffix to strip.
+            if (!s.endsWith(crypt) || s.size() <= crypt.size()) continue;
+            Row r;
+            r.sym   = s.left(s.size()-crypt.size());
+            r.price = o["lastPrice"].toString().toDouble();
+            r.vol   = o["quoteVolume"].toString().toDouble();
+            r.ch24  = o["priceChangePercent"].toString().toDouble();
+            if (r.vol > 0) rows.append(r);
+        }
+    } else {                                   // KuCoin: BASE-QUOTE, rate as a fraction
+        for (const QJsonValue &v : doc.object()["data"].toObject()["ticker"].toArray()) {
+            QJsonObject o = v.toObject();
+            QStringList parts = o["symbol"].toString().split('-');
+            if (parts.size() != 2 || parts[1] != crypt) continue;
+            Row r;
+            r.sym   = parts[0];
+            r.price = o["last"].toString().toDouble();
+            r.vol   = o["volValue"].toString().toDouble();
+            r.ch24  = o["changeRate"].toString().toDouble()*100;
+            if (r.vol > 0) rows.append(r);
+        }
+    }
+
+    // Rank by turnover, then let CoinGecko's own rank win where it has one.
+    std::sort(rows.begin(), rows.end(),
+              [](const Row &a, const Row &b){ return a.vol > b.vol; });
+
+    QJsonArray data;
+    for (int i = 0; i < rows.size(); i++) {
+        const Row &r = rows[i];
+        const Extra e = extra.value(r.sym);
+        QJsonObject q;
+        q["price"]              = r.price;
+        q["volume_24h"]         = r.vol;
+        q["percent_change_1h"]  = e.have ? e.h1 : 0.0;
+        q["percent_change_24h"] = r.ch24;
+        q["percent_change_7d"]  = e.have ? e.d7 : 0.0;
+        q["market_cap"]         = e.cap;
+        q["last_updated"]       = now;
+        QJsonObject quote; quote[stake] = q;
+        QJsonObject coin;
+        coin["cmc_rank"] = (e.have && e.rank > 0) ? e.rank : i+1;
+        coin["symbol"]   = r.sym;
+        coin["name"]     = r.sym;        // an exchange ticker carries no long name
+        coin["quote"]    = quote;
+        data.append(coin);
+    }
+    QJsonObject root; root["data"] = data;
+    return QJsonDocument(root).toJson(QJsonDocument::Compact);
+}
+
 void MainWindow::replyFinished (QNetworkReply *reply)
 {
     if(reply->error())
     {
-        ui->messages->setText("ERROR! "+reply->errorString());
-
+        // CoinGecko only supplies market cap, rank and the 1h/7d figures. If it
+        // is down or rate limiting us, the exchange prices are still good and
+        // are worth writing without it.
+        if (reply->url().host().contains("coingecko") && !pendingTickers.isEmpty()) {
+            // Whatever pages did arrive are still worth using.
+            QByteArray body = exchangeToCmcJson(pendingTickers, geckoRows);
+            pendingTickers.clear();
+            geckoRows = QJsonArray();
+            QString path = loadsettings("json_path").toString();
+            if (path == "") path = ".";
+            QFile file(path+"/crypto_"+crypt+".json");
+            if (file.open(QFile::WriteOnly)) { file.write(body); file.close(); }
+            ui->messages->setText("Prices from "+exchange+"; no market cap (CoinGecko: "
+                                  +reply->errorString()+")");
+            reload_model();
+        } else ui->messages->setText("ERROR! "+reply->errorString());
     }
     else
     {
@@ -743,17 +886,46 @@ void MainWindow::replyFinished (QNetworkReply *reply)
         //ui->transferLog->appendPlainText(reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toString());
         //ui->transferLog->appendPlainText(reply->attribute(QNetworkRequest::HttpReasonPhraseAttribute).toString());
         //ui->transferLog->appendPlainText("OK");
+        const QString host = reply->url().host();
+        QByteArray body = reply->readAll();
+
+        // An exchange ticker is only half the answer: ask CoinGecko for the
+        // market caps and ranks, then convert both together.
+        if (host.contains("binance") || host.contains("kucoin")) {
+            pendingTickers = body;
+            geckoRows = QJsonArray();
+            geckoPage = 1;
+            fetchGeckoPage(geckoPage);
+            reply->deleteLater();
+            return;
+        }
+        if (host.contains("coingecko")) {
+            const QJsonArray page = QJsonDocument::fromJson(body).array();
+            for (const QJsonValue &v : page) geckoRows.append(v);
+            // Keep asking while the pages are full and we are inside the top
+            // 1000. A short page means the list has run out.
+            if (page.count() == 250 && geckoPage < 4) {
+                ui->messages->setText("Fetching market caps ("+QString::number(geckoRows.count())+")...");
+                fetchGeckoPage(++geckoPage);
+                reply->deleteLater();
+                return;
+            }
+            body = exchangeToCmcJson(pendingTickers, geckoRows);
+            pendingTickers.clear();
+            geckoRows = QJsonArray();
+        }
+
         QString path = loadsettings("json_path").toString();
         if (path == "") path = ".";
         QFile *file = new QFile(path+"/crypto_"+crypt+".json");
         if(file->open(QFile::WriteOnly))
         {
-            file->write(reply->readAll());
+            file->write(body);
             file->flush();
             file->close();
         }
         delete file;
-        if (timer->isActive()) reload_model();
+        reload_model();
     }
 
     reply->deleteLater();

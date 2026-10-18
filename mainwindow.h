@@ -48,6 +48,11 @@ public:
     void initializeModel(QSqlTableModel *sqlmodel);
     QVariant loadsettings(QString settings);
     void savesettings(QString settings, QVariant attr);
+    // Fetch prices from the selected exchange instead of CoinMarketCap. No API
+    // key, and the exchange only lists what it actually trades.
+    void fetchFromExchange();
+    void fetchGeckoPage(int page);
+    QByteArray exchangeToCmcJson(const QByteArray &tickers, const QJsonArray &gecko);
     ~MainWindow();
 
 private slots:
@@ -76,5 +81,15 @@ private:
     QSqlTableModel * sqlmodel;
     QStandardItemModel *model;
     QNetworkAccessManager *manager;
+    // The exchange reply, held while CoinGecko is asked for the market caps
+    // and ranks that an exchange ticker does not carry.
+    QByteArray pendingTickers;
+    // CoinGecko returns at most 250 coins per request, and a busy exchange
+    // lists far more than that, so the pages are collected before converting.
+    QJsonArray geckoRows;
+    int geckoPage = 0;
+    // Guards the fetch-when-empty path against asking forever. See
+    // initializemodel().
+    bool exchangeFetchTried = false;
 };
 #endif // MAINWINDOW_H

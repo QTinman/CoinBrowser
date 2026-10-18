@@ -55,8 +55,6 @@ settingsDialog::settingsDialog(QWidget *parent) :
     double btc_price = loadsettings(exchange.toLower()+"_stake_coin_price").toDouble();
     if (crypt.contains("USD")) btc_price=1;
     ui->stake_coin_price->setValue(btc_price);
-    QString apikey = loadsettings("apikey").toString();
-    ui->apikey->setText(apikey);
     bool autoupdatejson=loadsettings("autoupdatejson").toBool();
     timeractive=autoupdatejson;
     ui->cryptoInvestFile->setText(loadsettings("cryptoInvestFile").toString());
@@ -178,7 +176,6 @@ void settingsDialog::on_buttonBox_accepted()
     savesettings("reportpath",ui->reportPath->text());
     savesettings(ui->exchanges->currentText().toLower()+"_stake_coin_price",ui->stake_coin_price->value());
     savesettings("report",ui->reports->isChecked());
-    savesettings("apikey",ui->apikey->text());
     savesettings("autoupdatejson",ui->autoupdatejson->isChecked());
     savesettings("autojsonmin",ui->autojsonmin->value());
     savesettings("rowsintable",ui->rowsintable->value());
