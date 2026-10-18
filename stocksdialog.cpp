@@ -19,9 +19,22 @@ stocksDialog::stocksDialog(QWidget *parent) :
 
     ui->setupUi(this);
     setGeometry(loadsettings("stockPosition").toRect());
-    ui->balance->setText("$"+loadsettings("balance").toString());
     if (!db.open()) ui->messages->setText("Error " + db.lastError().text());
     if (!db.tables().contains(table)) createTable(table);
+
+    // No cash and nothing held is a simulator that cannot do anything, so it
+    // is not a state worth preserving - stake it with 1000. Checked against
+    // the portfolio rather than against the setting existing, because an
+    // install that has been through Settings once already has balance stored
+    // as 0 and would otherwise stay stuck there.
+    if (loadsettings("balance").toDouble() <= 0) {
+        QSqlQuery held(db);
+        int rows = 0;
+        if (held.exec("SELECT COUNT(*) FROM \""+table+"\"") && held.next())
+            rows = held.value(0).toInt();
+        if (rows == 0) savesettings("balance",1000);
+    }
+    ui->balance->setText("$"+loadsettings("balance").toString());
     manager = new QNetworkAccessManager(this);
     connect(manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(replyFinished(QNetworkReply*)));
     this->setWindowTitle("Portfolio simulator");
@@ -373,11 +386,22 @@ void stocksDialog::on_sellCrypto_clicked()
 void stocksDialog::on_getPrice_clicked()
 {
     closePrice=0;
-    QString url="https://www.binance.com/api/v3/klines?symbol="+ui->crypto->currentText()+"USDT&interval=5m&limit=1&startTime="+QString::number(QDateTime::currentDateTime().addMSecs(-300000).toMSecsSinceEpoch());
+    QString url="https://api.binance.com/api/v3/klines?symbol="+ui->crypto->currentText()+"USDT&interval=5m&limit=1&startTime="+QString::number(QDateTime::currentDateTime().addMSecs(-300000).toMSecsSinceEpoch());
     worker.get(url);
     delay(1000);
     process_dataframe("./files/"+ui->crypto->currentText()+"USDT.json");
-    ui->getPrice->setText(QString::number(closePrice));
+    if (closePrice > 0) {
+        ui->getPrice->setText(QString::number(closePrice));
+        ui->messages->setText("");
+    } else {
+        // A buy needs a price, and the button showing "0" looked like one.
+        // Leaving it on "Get price" keeps on_buy_clicked's own guard working,
+        // and says why instead of quietly offering a zero.
+        ui->getPrice->setText("Get price");
+        ui->messages->setText("No price for "+ui->crypto->currentText()
+                              +"USDT - either the pair is not on Binance, or the"
+                               " reply was slower than the delay in settings.");
+    }
 }
 
 
