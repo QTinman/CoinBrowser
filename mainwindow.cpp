@@ -783,21 +783,46 @@ void MainWindow::reload_model()
         timeroff=QDateTime::currentDateTime().addMSecs(timer->remainingTime());
     }
     QStringList modellist = initializemodel();
+    model->setSortRole(Qt::UserRole);
     model->setRowCount(modellist.length()/colums);
     while (i < modellist.length()-1) {
        for (col=0;col<colums;col++) {
          index=model->index(row,col,QModelIndex());
-         if (col == 0) model->setData(index,modellist[i].toInt());
-         if (col < 4 & col > 0) model->setData(index,modellist[i]);
-         if (col < 9 & col > 2) model->setData(index,modellist[i].toDouble());
-         if (col == 9) model->setData(index,modellist[i].toInt());
-         if (col == 10) model->setData(index,modellist[i]);
+         const QString cell = modellist[i];
+         // Price and rank move keep the text they were given; the rest are
+         // numbers. The old conditions overlapped - columns 1-3 were written
+         // as strings and then columns 3-8 again as doubles - so the price
+         // column ended up a raw double and Qt printed small ones in
+         // scientific notation, which is where 1.7e-07 came from. Rank move
+         // went through toInt(), turning the "-" for a coin with no previous
+         // row into 0, which is why that column was a row of zeroes.
+         switch (col) {
+           case 0:  model->setData(index, cell.toInt());    break;   // rank
+           case 1:
+           case 2:  model->setData(index, cell);            break;   // symbol, name
+           case 3:  model->setData(index, cell);            break;   // price, already formatted
+           case 9:  model->setData(index, cell);            break;   // rank move, may be "-"
+           case 10: model->setData(index, cell);            break;   // time
+           default: model->setData(index, cell.toDouble()); break;   // the percentages
+         }
+         // Sorting reads this, so a column displayed as text still sorts by
+         // its number: price by value rather than alphabetically, and "-"
+         // as nothing moved.
+         model->setData(index, cell.toDouble(), Qt::UserRole);
          model->setData(index, Qt::AlignCenter, Qt::TextAlignmentRole);
          i++;
         }
       row++;
     }
-   // if (loadsettings("autopudatejson", autoupd)
+    // Re-apply whatever the header is showing. Filling the model with setData
+    // does not re-sort it, so the view kept the order the data arrived in -
+    // volume, highest first, because that is how the exchange reply is
+    // written - while the header still showed the Rank arrow from the one
+    // sortByColumn call in the constructor. The arrow and the rows agree now,
+    // and a column the user clicked stays sorted across a reload.
+    if (ui->tableView->isSortingEnabled())
+        model->sort(ui->tableView->horizontalHeader()->sortIndicatorSection(),
+                    ui->tableView->horizontalHeader()->sortIndicatorOrder());
 }
 
 
