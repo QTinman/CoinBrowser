@@ -13,6 +13,7 @@
 
 #include <QSqlRecord>
 
+#include <cmath>
 #include <QMessageBox>
 #include <QGuiApplication>
 #include <QAbstractButton>
@@ -30,6 +31,23 @@ QString appgroup="coinbrowser";
 double from1h=-2,to1h=5,from24h=0,to24h=100,from7d=-2,to7d=100,btc_price=58338,markedcap_percent,volume_percent_min,volume_percent_max,price_change_from,price_change_to,volum_min,pricemin,pricemax;
 bool change_1h,change_24h,change_7d,volume,marked_cap,use_volume,show_only_blacklisted,change_price,create_db=false,pricefilter,volume_min_check ,timeupdatedb=false;
 
+
+// Prices are formatted to about five significant digits rather than a fixed
+// three decimals. Three is fine for BTC at 82191.6 and destroys everything
+// priced in BTC: XRP at 0.0000158 rounded to "0.000", SOL at 0.00127 to
+// "0.001". Trailing zeros are trimmed so 0.029 does not read 0.0290000.
+static QString formatPrice(double p)
+{
+    if (!(p > 0)) return "0";
+    int decimals = 5 - int(std::floor(std::log10(p)));
+    decimals = qBound(2, decimals, 12);
+    QString t = QString::number(p, 'f', decimals);
+    if (t.contains('.')) {
+        while (t.endsWith('0')) t.chop(1);
+        if (t.endsWith('.')) t.chop(1);
+    }
+    return t;
+}
 
 int stakedBalance(int stored)
 {
@@ -627,7 +645,7 @@ QStringList MainWindow::initializemodel()
                 for ( const auto& i : pairs  ) //Write to tableview
                 {
                     if ((priceok && weekplus && dayplus && hourplus && volumeok && volummin && i==symbol && inrank && marked_cap_ok && unique<2 && priceplus && coin_from <= coincounts && coincounts <= coin_to) || (!ui->filter->isChecked() && i==symbol && unique<2 && coin_from <= coincounts && coincounts <= coin_to)) {
-                        modeldatalist << QString::number(id) << symbol << name << QString::number(price, 'F', 3) << QString::number(price_change, 'F', 2) << QString::number(volume_24h, 'F', 2) << QString::number(percent_change_1h, 'F', 2) << QString::number(percent_change_24h, 'F', 2) << QString::number(percent_change_7d, 'F', 2) << rankmove << last_updated_time;
+                        modeldatalist << QString::number(id) << symbol << name << formatPrice(price) << QString::number(price_change, 'F', 2) << QString::number(volume_24h, 'F', 2) << QString::number(percent_change_1h, 'F', 2) << QString::number(percent_change_24h, 'F', 2) << QString::number(percent_change_7d, 'F', 2) << rankmove << last_updated_time;
                         if (report) {
                             csv_string=name+","+QString::number(volume_24h)+","+QString::number(db_volume_24h)+","+QString::number(percent_change_1h)+","+QString::number(db_percent_change_1h)+","+last_updated+","+db_last_updated+","+cd.toString()+","+cdt.toString();
                             outStream << csv_string+"\n";
@@ -753,6 +771,10 @@ void MainWindow::searchmodel(const QString& text)
 
 void MainWindow::reload_model()
 {
+    // Set here rather than only in the constructor and combo_refresh. Changing
+    // the stake coin in Settings updated the window title and left the column
+    // reading "Price USDT" over prices quoted in BTC.
+    if (model) model->setHeaderData(3, Qt::Horizontal, "Price "+crypt, Qt::DisplayRole);
     int row=0,i=0,col;
     QModelIndex index;
     QDateTime cdt=QDateTime::currentDateTime();
