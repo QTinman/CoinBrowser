@@ -40,7 +40,13 @@ QJsonArray MainWindow::ReadJson(const QString &path)
 
         QJsonObject jsonObject = cryptolist.object();
         jsonArray = jsonObject["data"].toArray();
-        if ((ui->cointo->value() == 0 || coin_to == 0) || coin_to > jsonArray.count()) ui->cointo->setValue(jsonArray.count());
+        // Clamping the range to the data must not look like the user moving
+        // the spinbox: valueChanged now triggers a reload, and a reload is
+        // what called this, so an unblocked setValue here recurses forever.
+        if ((ui->cointo->value() == 0 || coin_to == 0) || coin_to > jsonArray.count()) {
+            QSignalBlocker block(ui->cointo);
+            ui->cointo->setValue(jsonArray.count());
+        }
         //qDebug() << "Number of cryptocurrencies " << jsonArray.count();
 
     }
@@ -97,6 +103,13 @@ MainWindow::MainWindow(QWidget *parent)
     coin_to = loadsettings("cointo").toInt();
     ui->cointo->setValue(coin_to);
     ui->coinfrom->setValue(coin_from);
+    // Nothing was connected to these, so changing the range did nothing until
+    // something else happened to reload the model. keyboardTracking(false)
+    // means a typed number arrives once, on Enter or focus out, instead of
+    // reloading after every digit - typing "20" would otherwise reload for 2
+    // and again for 20.
+    ui->cointo->setKeyboardTracking(false);
+    ui->coinfrom->setKeyboardTracking(false);
     markedcap_percent = loadsettings("markedcap_percent").toDouble();
     volume_percent_min = loadsettings("volume_percent_min").toDouble();
     volume_percent_max = loadsettings("volume_percent_max").toDouble();
@@ -161,6 +174,11 @@ MainWindow::MainWindow(QWidget *parent)
     //QModelIndex index;
 
     model = new QStandardItemModel(modellist.length()/colums,colums,this);
+    // Connected after model exists, because reload_model writes into it.
+    connect(ui->cointo, QOverload<int>::of(&QSpinBox::valueChanged),
+            this, [=](int){ reload_model(); });
+    connect(ui->coinfrom, QOverload<int>::of(&QSpinBox::valueChanged),
+            this, [=](int){ reload_model(); });
     connect(ui->search,SIGNAL(textEdited(const QString &)),this,SLOT(searchmodel(const QString&)));
     reload_model();
 
@@ -558,8 +576,11 @@ QStringList MainWindow::initializemodel()
                 else if (!change_7d) weekplus=true;
                 if (price < pricemax && price > pricemin && pricefilter) priceok=true;
                 else if (!pricefilter) priceok=true;
-                QString rankmove=QString::number(db_id-id);
-                if (db_id-id == 0) rankmove="-";
+                // A coin with no row in the previous table has db_id 0, which
+                // made the move read as minus its own rank - the column was
+                // full of -121, -145, -691 on any newly built table.
+                QString rankmove = (db_id == 0 || db_id-id == 0) ? "-"
+                                                                 : QString::number(db_id-id);
                 for ( const auto& i : pairs  )
                 {
                     if (i == symbol) inrank = true;
@@ -568,7 +589,7 @@ QStringList MainWindow::initializemodel()
                 for ( const auto& i : pairs  ) //Write to tableview
                 {
                     if ((priceok && weekplus && dayplus && hourplus && volumeok && volummin && i==symbol && inrank && marked_cap_ok && unique<2 && priceplus && coin_from <= coincounts) || (!ui->filter->isChecked() && i==symbol && unique<2 && coin_from <= coincounts)) {
-                        modeldatalist << QString::number(id) << symbol << name << QString::number(price, 'F', 3) << QString::number(price_change, 'F', 2) << QString::number(volume_24h, 'F', 2) << QString::number(percent_change_1h, 'F', 2) << QString::number(percent_change_24h, 'F', 2) << QString::number(percent_change_7d, 'F', 2) << QString::number(db_id-id) << last_updated_time;
+                        modeldatalist << QString::number(id) << symbol << name << QString::number(price, 'F', 3) << QString::number(price_change, 'F', 2) << QString::number(volume_24h, 'F', 2) << QString::number(percent_change_1h, 'F', 2) << QString::number(percent_change_24h, 'F', 2) << QString::number(percent_change_7d, 'F', 2) << rankmove << last_updated_time;
                         if (report) {
                             csv_string=name+","+QString::number(volume_24h)+","+QString::number(db_volume_24h)+","+QString::number(percent_change_1h)+","+QString::number(db_percent_change_1h)+","+last_updated+","+db_last_updated+","+cd.toString()+","+cdt.toString();
                             outStream << csv_string+"\n";
