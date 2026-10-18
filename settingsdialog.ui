@@ -189,20 +189,6 @@
      </item>
     </layout>
    </item>
-   <item row="7" column="0">
-    <layout class="QHBoxLayout" name="horizontalLayout_8">
-     <item>
-      <widget class="QLabel" name="label_7">
-       <property name="text">
-        <string>CoinMarketCap API key</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLineEdit" name="apikey"/>
-     </item>
-    </layout>
-   </item>
    <item row="8" column="0" colspan="2">
     <layout class="QHBoxLayout" name="horizontalLayout_9">
      <item>

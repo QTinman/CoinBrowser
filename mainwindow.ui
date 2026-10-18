@@ -240,20 +240,12 @@
    <addaction name="menu_Update"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
-  <action name="actionUpdateDB">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>1_UpdateDB</string>
-   </property>
-  </action>
   <action name="actionUpdateJson">
    <property name="checkable">
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>UpdateJson</string>
+    <string>Update prices</string>
    </property>
   </action>
  </widget>

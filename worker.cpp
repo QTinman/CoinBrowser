@@ -135,6 +135,12 @@ void Worker::readyRead()
         end=pair.indexOf("&",start);
         pair=pair.mid(start+7,end-start-7);
 
+        // QFile will not create a missing directory, and does not complain
+        // either - open() just fails and the reply is thrown away. With no
+        // ./files the simulator's Get price then read a file that had never
+        // been written, and reported 0 for every coin.
+        QDir().mkpath("./files");
+
         QFile *file = new QFile("./files/"+pair+".json");
         if (file->error()) qDebug() << file->errorString();
         if(file->open(QFile::WriteOnly))

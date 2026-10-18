@@ -15,6 +15,21 @@
 #include <QUrl>
 //#include <QtQml/QQmlEngine>
 
+// One row of the previous run's table, kept in a hash so the update loop can
+// look a coin up without querying the database once per coin.
+struct PrevRow {
+    int id = 0;
+    QString symbol;
+    double price = 0, volume_24h = 0, percent_change_1h = 0, market_cap = 0;
+    QString last_updated;
+};
+
+// The simulator's starting stake, in one place so Settings and the simulator
+// cannot disagree about it. 1000 when there is nothing to protect - no cash
+// and no holdings. A balance spent to zero while coins are still held is a
+// real position and comes back unchanged.
+int stakedBalance(int stored);
+
 extern QSqlDatabase db;
 extern QTimer *timer;
 extern QString exchange, appgroup,crypt;
@@ -39,6 +54,13 @@ public:
     void initializeModel(QSqlTableModel *sqlmodel);
     QVariant loadsettings(QString settings);
     void savesettings(QString settings, QVariant attr);
+    // Fetch prices from the selected exchange instead of CoinMarketCap. No API
+    // key, and the exchange only lists what it actually trades.
+    QString pairFilePath();
+    bool writePairFile(const QString &filename);
+    void fetchFromExchange();
+    void fetchGeckoPage(int page);
+    QByteArray exchangeToCmcJson(const QByteArray &tickers, const QJsonArray &gecko);
     ~MainWindow();
 
 private slots:
@@ -46,7 +68,6 @@ private slots:
     void on_filter_clicked();
     void reload_model();
     void tableage();
-    void on_actionUpdateDB_changed();
     void calc_profit();
     void on_actionUpdateJson_changed();
     void replyFinished (QNetworkReply *reply);
@@ -67,5 +88,15 @@ private:
     QSqlTableModel * sqlmodel;
     QStandardItemModel *model;
     QNetworkAccessManager *manager;
+    // The exchange reply, held while CoinGecko is asked for the market caps
+    // and ranks that an exchange ticker does not carry.
+    QByteArray pendingTickers;
+    // CoinGecko returns at most 250 coins per request, and a busy exchange
+    // lists far more than that, so the pages are collected before converting.
+    QJsonArray geckoRows;
+    int geckoPage = 0;
+    // Guards the fetch-when-empty path against asking forever. See
+    // initializemodel().
+    bool exchangeFetchTried = false;
 };
 #endif // MAINWINDOW_H

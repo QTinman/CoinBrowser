@@ -55,12 +55,12 @@ settingsDialog::settingsDialog(QWidget *parent) :
     double btc_price = loadsettings(exchange.toLower()+"_stake_coin_price").toDouble();
     if (crypt.contains("USD")) btc_price=1;
     ui->stake_coin_price->setValue(btc_price);
-    QString apikey = loadsettings("apikey").toString();
-    ui->apikey->setText(apikey);
     bool autoupdatejson=loadsettings("autoupdatejson").toBool();
     timeractive=autoupdatejson;
     ui->cryptoInvestFile->setText(loadsettings("cryptoInvestFile").toString());
-    ui->balance->setValue(loadsettings("balance").toInt());
+    // Shows 1000 rather than 0 on a simulator that has never been staked,
+    // so the default is visible where the balance is set.
+    ui->balance->setValue(stakedBalance(loadsettings("balance").toInt()));
     ui->autoupdatejson->setChecked(autoupdatejson);
     int tableage = loadsettings("tableage").toInt();
     if (tableage == 0) {
@@ -151,11 +151,11 @@ void settingsDialog::on_pushButton_clicked()
     QMessageBox msgBox;
     QClipboard *clipboard=0;
     msgBox.setWindowTitle("Donate!");
-    msgBox.setText("If you find this program useful please donate to.\nBTC bc1qmeetnrmdfu2czp43ggq4v56wrxtk7cfahyr2m9\nDOT 12XHN5kYhSfCUdwiEAKMkW87L2kKV2AjerLMQukHJ4CnmKbL\nXRP rGzJmHraBUCWpncm3DGdscmAsuy3rDin4R\nADA addr1q9h424fgyqw3y0zer34myqn9lyr303nxcyvzttk8nyqmr7r0242jsgqazg79j8rtkgpxt7g8zlrxdsgcykhv0xgpk8uqh49hnw\nVET 0x136349A99A5a56617e7E7AdbE8c55a0712B0068F\nSupport is most appreciated.");
+    msgBox.setText("If you find this program useful please donate to.\nBTC bc1qt4jv89m5gy62e64j9kwyhu7n65s0yhp4nqayag\nETH 0x9129B88AA1fEE2545d1123e71e9Fa2c43C075979\nSOL 3s4nqsu2WiPFrXSmxKY7U3zX4RtKCEgczaNkVBwcgdXS\nZEC t1fb8QAsRdNT2sF6LXoYsHSmHLv18UpPW9D\nSupport is most appreciated.");
     QAbstractButton* pButtonYes = msgBox.addButton(tr("Copy to clipboard"), QMessageBox::YesRole);
     msgBox.exec();
     if (msgBox.clickedButton()==pButtonYes) {
-        clipboard->setText("BTC bc1qmeetnrmdfu2czp43ggq4v56wrxtk7cfahyr2m9\nDOT 12XHN5kYhSfCUdwiEAKMkW87L2kKV2AjerLMQukHJ4CnmKbL\nXRP rGzJmHraBUCWpncm3DGdscmAsuy3rDin4R\nADA addr1q9h424fgyqw3y0zer34myqn9lyr303nxcyvzttk8nyqmr7r0242jsgqazg79j8rtkgpxt7g8zlrxdsgcykhv0xgpk8uqh49hnw\nVET 0x136349A99A5a56617e7E7AdbE8c55a0712B0068F");
+        clipboard->setText("BTC bc1qt4jv89m5gy62e64j9kwyhu7n65s0yhp4nqayag\nETH 0x9129B88AA1fEE2545d1123e71e9Fa2c43C075979\nSOL 3s4nqsu2WiPFrXSmxKY7U3zX4RtKCEgczaNkVBwcgdXS\nZEC t1fb8QAsRdNT2sF6LXoYsHSmHLv18UpPW9D");
     }
 }
 
@@ -178,7 +178,6 @@ void settingsDialog::on_buttonBox_accepted()
     savesettings("reportpath",ui->reportPath->text());
     savesettings(ui->exchanges->currentText().toLower()+"_stake_coin_price",ui->stake_coin_price->value());
     savesettings("report",ui->reports->isChecked());
-    savesettings("apikey",ui->apikey->text());
     savesettings("autoupdatejson",ui->autoupdatejson->isChecked());
     savesettings("autojsonmin",ui->autojsonmin->value());
     savesettings("rowsintable",ui->rowsintable->value());
