@@ -424,7 +424,6 @@ QStringList MainWindow::initializemodel()
         if ((timeupdatedb && autoupdatejson) || ui->actionUpdateJson->isChecked()) {
             create_db=true;
             cycles++;
-            ui->actionUpdateDB->setChecked(false);
             createdb();
         }
         coin_to = ui->cointo->value();
@@ -734,15 +733,6 @@ void MainWindow::calc_profit()
     //((490−350) ÷350)×100
 }
 
-void MainWindow::on_actionUpdateDB_changed()
-{
-    ui->messages->setText("Database updating...Please wait.");
-    ui->messages->show();
-    reload_model();
-    ui->messages->setText("Database updated.");
-    reload_model();
-}
-
 void MainWindow::on_actionUpdateJson_changed()
 {
     ui->messages->setText("Updating prices, please wait...");
@@ -854,6 +844,18 @@ QByteArray MainWindow::exchangeToCmcJson(const QByteArray &tickers, const QJsonA
     std::sort(rows.begin(), rows.end(),
               [](const Row &a, const Row &b){ return a.vol > b.vol; });
 
+    // Rank has to mean one thing. CoinGecko gives a real market cap rank for
+    // the coins it covers; the rest had been numbered by their position in
+    // this volume-sorted list, which put a long-tail coin at "5" beside a
+    // genuine number 5. Anything unranked is numbered after the ranked ones
+    // instead, keeping the column a single ordering.
+    int maxrank = 1000;
+    for (const Row &r : rows) {
+        const Extra e = extra.value(r.sym);
+        if (e.have && e.rank > maxrank) maxrank = e.rank;
+    }
+    int unranked = maxrank;
+
     QJsonArray data;
     for (int i = 0; i < rows.size(); i++) {
         const Row &r = rows[i];
@@ -868,7 +870,7 @@ QByteArray MainWindow::exchangeToCmcJson(const QByteArray &tickers, const QJsonA
         q["last_updated"]       = now;
         QJsonObject quote; quote[stake] = q;
         QJsonObject coin;
-        coin["cmc_rank"] = (e.have && e.rank > 0) ? e.rank : i+1;
+        coin["cmc_rank"] = (e.have && e.rank > 0) ? e.rank : ++unranked;
         coin["symbol"]   = r.sym;
         coin["name"]     = r.sym;        // an exchange ticker carries no long name
         coin["quote"]    = quote;

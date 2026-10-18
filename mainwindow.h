@@ -60,7 +60,6 @@ private slots:
     void on_filter_clicked();
     void reload_model();
     void tableage();
-    void on_actionUpdateDB_changed();
     void calc_profit();
     void on_actionUpdateJson_changed();
     void replyFinished (QNetworkReply *reply);
