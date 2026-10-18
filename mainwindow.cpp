@@ -466,6 +466,12 @@ QStringList MainWindow::initializemodel()
         // whose only index is its primary key - a full scan every time, so
         // 5000 coins meant 5000 scans of up to 5000 rows each.
         QHash<QString, PrevRow> prev;
+        // The previous table's own timestamp, taken from its rows. The status
+        // line used to report db_date/db_mo/db_h/db_min, which are parsed per
+        // coin inside the loop and then read after it - so it showed whatever
+        // the last coin happened to leave behind, and 0/0 0:00 whenever that
+        // coin had no previous row.
+        QString prevStamp;
         if (!prevtable.isEmpty()) {
             QSqlQuery prevqry(db);
             if (prevqry.exec("SELECT id,symbol,name,price,volume_24h,percent_change_1h,"
@@ -479,6 +485,7 @@ QStringList MainWindow::initializemodel()
                     r.percent_change_1h = prevqry.value(5).toDouble();
                     r.market_cap        = prevqry.value(6).toDouble();
                     r.last_updated      = prevqry.value(7).toString();
+                    if (prevStamp.isEmpty()) prevStamp = r.last_updated;
                     prev.insert(prevqry.value(2).toString(), r);
                 }
             } else qDebug() << "Error reading previous table:" << prevqry.lastError().text();
@@ -643,7 +650,20 @@ QStringList MainWindow::initializemodel()
 
         }
         if (jsonArray.count() == 0) ui->messages->setText("Json file not found, please update json file");
-        if (pairs.count() > 0 && jsonArray.count() > 0) ui->messages->setText("Database is from "+QString::number(db_date)+"/"+QString::number(db_mo)+", time "+QString::number(db_h,'G',2)+":"+QString::number(db_min).rightJustified(2,'0'));
+        if (pairs.count() > 0 && jsonArray.count() > 0) {
+            // Says which table the comparison columns are against and how many
+            // coins it had, so an empty previous table is visible rather than
+            // showing up as a screen full of zeroes.
+            QString when = prevStamp.isEmpty()
+                         ? QString("no earlier table to compare against")
+                         : QString("compared against %1 (%2 coins), written %3")
+                               .arg(prevtable).arg(prev.count())
+                               .arg(QDateTime::fromString(prevStamp, Qt::ISODateWithMs).isValid()
+                                    ? QDateTime::fromString(prevStamp, Qt::ISODateWithMs)
+                                          .toLocalTime().toString("d MMM HH:mm")
+                                    : prevStamp.left(16));
+            ui->messages->setText(when);
+        }
         // Close the transaction opened before the loop. Everything the run
         // inserted reaches disk here, in one commit.
         if (create_db && !db.commit()) {
