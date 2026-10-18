@@ -32,6 +32,23 @@ double from1h=-2,to1h=5,from24h=0,to24h=100,from7d=-2,to7d=100,btc_price=58338,m
 bool change_1h,change_24h,change_7d,volume,marked_cap,use_volume,show_only_blacklisted,change_price,create_db=false,pricefilter,volume_min_check ,timeupdatedb=false;
 
 
+// How a moment is written, everywhere it is shown. The machine's own
+// convention decides the order, and a two-digit year is widened to four so an
+// old table cannot be mistaken for a recent one.
+static QString localStamp(const QDateTime &dt)
+{
+    QString fmt = QLocale::system().dateTimeFormat(QLocale::ShortFormat);
+    if (!fmt.contains("yyyy")) fmt.replace("yy", "yyyy");
+    return QLocale::system().toString(dt.toLocalTime(), fmt);
+}
+
+static QDateTime stampOf(const QString &iso)
+{
+    QDateTime dt = QDateTime::fromString(iso, Qt::ISODateWithMs);
+    if (!dt.isValid()) dt = QDateTime::fromString(iso, Qt::ISODate);
+    return dt;
+}
+
 // Prices are formatted to about five significant digits rather than a fixed
 // three decimals. Three is fine for BTC at 82191.6 and destroys everything
 // priced in BTC: XRP at 0.0000158 rounded to "0.000", SOL at 0.00127 to
@@ -197,7 +214,7 @@ MainWindow::MainWindow(QWidget *parent)
     }
     tableage();
     ui->tables->setCurrentIndex(0);
-    dbtable=ui->tables->currentText();
+    dbtable=ui->tables->currentData().toString();
     if (dbtable=="") createdb();
     sqlmodel = new QSqlTableModel(this,db);
     initializeModel(sqlmodel);
@@ -336,10 +353,20 @@ void MainWindow::tableage()
         //qDebug() << cdt.addSecs(-tableage*3600) << " " << cdttable;
         if (cdt.addSecs(-(tableage*3600)) < cdttable) {
 
-            ui->tables->addItem(i);
+            ui->tables->addItem(tableLabel(i), i);
         }
     }
     ui->tables->setCurrentIndex(0);
+}
+
+QString MainWindow::tableLabel(const QString &table)
+{
+    QSqlQuery q(db);
+    if (q.exec("SELECT last_updated FROM \""+table+"\" LIMIT 1") && q.next()) {
+        const QDateTime dt = stampOf(q.value(0).toString());
+        if (dt.isValid()) return localStamp(dt);
+    }
+    return table;        // nothing written yet, or a stamp we cannot read
 }
 
 void MainWindow::createdb()
@@ -347,7 +374,9 @@ void MainWindow::createdb()
     QDate cd = QDate::currentDate();
     QTime ct = QTime::currentTime();
     dbtable=crypt+"_"+QString::number(cd.day())+"‑"+QString::number(cd.month())+"_"+QString::number(ct.hour())+"‑"+QString::number(ct.minute()).rightJustified(2,'0');
-    ui->tables->addItem(dbtable);
+    // Created now, so it is labelled now - the table is still empty, and
+    // tableLabel would find no row to read a time from.
+    ui->tables->addItem(localStamp(QDateTime::currentDateTime()), dbtable);
     QString createTables = "create table "+dbtable+"(id integer primary key, "
           "symbol varchar(7), "
           "name varchar(30), "
@@ -465,7 +494,7 @@ QStringList MainWindow::initializemodel()
         int top_1h=0, bottom_1h=0;
         QString top_symbol="",bottom_symbol="";
         bool autoupdatejson=loadsettings("autoupdatejson").toBool();
-        dbtable=ui->tables->currentText();
+        dbtable=ui->tables->currentData().toString();
         // The table to compare against. createdb() below points dbtable at a
         // brand new empty table, so the previous one has to be remembered here
         // or every lookup in the loop finds nothing and the comparison columns
@@ -686,20 +715,8 @@ QStringList MainWindow::initializemodel()
             QString when;
             if (prevStamp.isEmpty()) when = "no earlier table to compare against";
             else {
-                QDateTime dt = QDateTime::fromString(prevStamp, Qt::ISODateWithMs);
-                if (!dt.isValid()) dt = QDateTime::fromString(prevStamp, Qt::ISODate);
-                QString stamp;
-                if (dt.isValid()) {
-                    // The machine's own date order, so 18/10 and 10/18 each
-                    // read correctly where they are read. The short format is
-                    // the one people recognise at a glance, but several
-                    // locales abbreviate the year in it - widened to four
-                    // digits, since a comparison a year old should not look
-                    // like one from this morning.
-                    QString fmt = QLocale::system().dateTimeFormat(QLocale::ShortFormat);
-                    if (!fmt.contains("yyyy")) fmt.replace("yy", "yyyy");
-                    stamp = QLocale::system().toString(dt.toLocalTime(), fmt);
-                } else stamp = prevStamp.left(16);
+                const QDateTime dt = stampOf(prevStamp);
+                const QString stamp = dt.isValid() ? localStamp(dt) : prevStamp.left(16);
                 // The table name is last and in brackets. It is the one thing
                 // here nobody can read - USDT_18-10_10-18 is stake, day, month,
                 // hour, minute - and it is already shown in the dropdown. It
@@ -749,9 +766,9 @@ void MainWindow::combo_refresh(int comboindex)
     crypt = loadsettings(exchange.toLower() + "_stake").toString();
     exchangeFetchTried = false;   // a different exchange is worth asking again
     ui->tables->clear();
-    for ( const auto& i : db.tables()  ) if (i.contains(crypt+"_")) ui->tables->addItem(i);
+    for ( const auto& i : db.tables()  ) if (i.contains(crypt+"_")) ui->tables->addItem(tableLabel(i), i);
     ui->tables->setCurrentIndex(ui->tables->count()-1);
-    dbtable=ui->tables->currentText();
+    dbtable=ui->tables->currentData().toString();
     if (dbtable=="") createdb();
     this->setWindowTitle("Cryptocurrency tool for Freqtrade, active stake coin "+crypt);
     model->setHeaderData(3, Qt::Horizontal, "Price "+crypt, Qt::DisplayRole);
@@ -871,7 +888,7 @@ void MainWindow::on_actionUpdateJson_changed()
 
 void MainWindow::on_tables_activated(int index)
 {
-    dbtable=ui->tables->currentText();
+    dbtable=ui->tables->currentData().toString();
     initializeModel(sqlmodel);
     reload_model();
 }
