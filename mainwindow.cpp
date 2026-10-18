@@ -125,6 +125,9 @@ MainWindow::MainWindow(QWidget *parent)
     if (cryptolistread == "") savesettings("cryptolistread",pwd);
     QString reportPath = loadsettings("reportpath").toString();
     if (reportPath == "") savesettings("reportpath",pwd);
+    // isValid(), not the value: a simulator balance spent down to nothing is a
+    // real 0 and must not be topped back up to 1000 on the next start.
+    if (!loadsettings("balance").isValid()) savesettings("balance",1000);
     for ( const auto& i : exchanges  ) {
       QString stake = loadsettings(i.toLower()+"_stake").toString();
       if (stake == "") {
@@ -181,6 +184,15 @@ MainWindow::MainWindow(QWidget *parent)
             this, [=](int){ reload_model(); });
     connect(ui->search,SIGNAL(textEdited(const QString &)),this,SLOT(searchmodel(const QString&)));
     reload_model();
+
+    // The simulator needs a list of coins, which until now meant pressing the
+    // write-to-file button and then pointing Settings at whatever it produced.
+    // If no file is configured, point at the one that button writes and write
+    // it, so the simulator has something to open on a first run.
+    if (loadsettings("cryptoInvestFile").toString().isEmpty()) {
+        const QString f = pairFilePath();
+        if (QFile::exists(f) || writePairFile(f)) savesettings("cryptoInvestFile",f);
+    }
 
     model->setHeaderData(0, Qt::Horizontal, "Rank", Qt::DisplayRole);
     model->setHeaderData(1, Qt::Horizontal, "Symbol", Qt::DisplayRole);
@@ -956,22 +968,29 @@ void MainWindow::replyFinished (QNetworkReply *reply)
 
 
 
-void MainWindow::on_fileButton_clicked()
+// The path the pair list is written to, and the one the simulator reads.
+QString MainWindow::pairFilePath()
 {
-    QFile fileout;
+    QString dir = loadsettings("cryptolistwrite").toString();
+    if (dir == "") dir = ".";
+    return dir+"/"+crypt.toLower()+"_"+exchange.toLower()+".txt";
+}
+
+// Lifted out of on_fileButton_clicked so that the startup path can write the
+// same file without a button press.
+bool MainWindow::writePairFile(const QString &filename)
+{
+    QFile fileout(filename);
     int row=0,col=1,rows=model->rowCount();
-    QTextStream out(&fileout);
     QStringList pairs;
     bool doub=false;
     QModelIndex index=model->index(row,col,QModelIndex());
-    QString cryptolistwrite = loadsettings("cryptolistwrite").toString();
-    if (cryptolistwrite == "") cryptolistwrite="./";
-    else cryptolistwrite = cryptolistwrite+"/";
-    fileout.setFileName(cryptolistwrite+crypt.toLower()+"_"+exchange.toLower()+".txt");
 
-    if (!fileout.open(QIODevice::WriteOnly | QIODevice::Text))
-        qDebug() << "Error opening file!";
-
+    if (!fileout.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        qDebug() << "Error opening file!" << fileout.errorString();
+        return false;
+    }
+    QTextStream out(&fileout);
     while (model->data(index.sibling(index.row(),col)).toString() != "")
     {
         for ( const auto& i : pairs  ) if (i==model->data(index.sibling(index.row(),col)).toString()) doub = true;
@@ -985,8 +1004,15 @@ void MainWindow::on_fileButton_clicked()
         doub=false;
         index=model->index(row,0,QModelIndex());
     }
-    ui->messages->setText("Pairs written to file -> "+cryptolistwrite+crypt.toLower()+"_"+exchange.toLower()+".txt");
     fileout.close();
+    return !pairs.isEmpty();
+}
+
+void MainWindow::on_fileButton_clicked()
+{
+    const QString f = pairFilePath();
+    if (writePairFile(f)) ui->messages->setText("Pairs written to file -> "+f);
+    else ui->messages->setText("Nothing to write - no coins in the table.");
 }
 
 

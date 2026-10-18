@@ -50,6 +50,8 @@ public:
     void savesettings(QString settings, QVariant attr);
     // Fetch prices from the selected exchange instead of CoinMarketCap. No API
     // key, and the exchange only lists what it actually trades.
+    QString pairFilePath();
+    bool writePairFile(const QString &filename);
     void fetchFromExchange();
     void fetchGeckoPage(int page);
     QByteArray exchangeToCmcJson(const QByteArray &tickers, const QJsonArray &gecko);
