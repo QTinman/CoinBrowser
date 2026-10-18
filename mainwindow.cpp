@@ -334,28 +334,12 @@ void MainWindow::tableage()
     QStringList recent;
     QDateTime cdt = QDateTime::currentDateTime();
     QDate cd = QDate::currentDate();
+    // One parser. This used to pick the name apart itself, assuming the old
+    // four-number layout, so a name carrying a year would have been read as
+    // nonsense and the table hidden or kept on the strength of it.
     for ( const auto& i : db.tables()  ) if (i.contains(crypt+"_")) {
-        int mm,hh,dd,mo,s,u;
-        u=i.indexOf("_");
-        s=i.indexOf("‑");
-        dd=i.mid(u+1,s-u-1).toInt();
-        u=i.indexOf("_",u+1);
-        mo=i.mid(s+1,u-s-1).toInt();
-        s=i.indexOf("‑",s+1);
-        hh=i.mid(u+1,s-u-1).toInt();
-        mm=i.mid(s+1,i.length()-s-1).toInt();
-        QDate datetable;
-        QTime timetable;
-        datetable.setDate(cd.year(),mo,dd);
-        timetable.setHMS(hh,mm,0);
-        QDateTime cdttable;
-        cdttable.setDate(datetable);
-        cdttable.setTime(timetable);
-        //qDebug() << cdt.addSecs(-tableage*3600) << " " << cdttable;
-        if (cdt.addSecs(-(tableage*3600)) < cdttable) {
-
-            recent << i;
-        }
+        const QDateTime made = tableMade(i);
+        if (!made.isValid() || cdt.addSecs(-(tableage*3600)) < made) recent << i;
     }
     // Newest first, so index 0 is the most recent snapshot. It used to be the
     // oldest, which is what every comparison column was measured against.
@@ -366,13 +350,26 @@ void MainWindow::tableage()
     ui->tables->setCurrentIndex(0);
 }
 
-// When a table was made, read out of its own name: <stake>_<d>?<m>_<h>?<min>,
-// where ? is a non-breaking hyphen. The name carries no year, so this year is
-// assumed and the previous one used if that would put the table in the future.
+// When a table was made, read out of its own name.
+//
+// New names carry the year: <stake>_<d>?<m>?<yyyy>_<h>?<min>. Older ones do
+// not, and for those the year has to be guessed - this year, or last year if
+// that would date the table in the future. The guess is right for anything
+// under a year old and silently wrong beyond that, which is why new tables
+// now say it outright.
 QDateTime MainWindow::tableMade(const QString &table)
 {
-    static const QRegularExpression re(R"(^[^_]+_(\d+)\D(\d+)_(\d+)\D(\d+)$)");
-    const QRegularExpressionMatch m = re.match(table);
+    static const QRegularExpression withYear(R"(^[^_]+_(\d+)\D(\d+)\D(\d{4})_(\d+)\D(\d+)$)");
+    static const QRegularExpression noYear(R"(^[^_]+_(\d+)\D(\d+)_(\d+)\D(\d+)$)");
+
+    QRegularExpressionMatch m = withYear.match(table);
+    if (m.hasMatch()) {
+        const QDate d(m.captured(3).toInt(), m.captured(2).toInt(), m.captured(1).toInt());
+        if (!d.isValid()) return QDateTime();
+        return QDateTime(d, QTime(m.captured(4).toInt(), m.captured(5).toInt()));
+    }
+
+    m = noYear.match(table);
     if (!m.hasMatch()) return QDateTime();
     const QDate d(QDate::currentDate().year(), m.captured(2).toInt(), m.captured(1).toInt());
     if (!d.isValid()) return QDateTime();
@@ -401,7 +398,15 @@ void MainWindow::createdb()
 {
     QDate cd = QDate::currentDate();
     QTime ct = QTime::currentTime();
-    dbtable=crypt+"_"+QString::number(cd.day())+"‑"+QString::number(cd.month())+"_"+QString::number(ct.hour())+"‑"+QString::number(ct.minute()).rightJustified(2,'0');
+    // The year is part of the name now, so nothing has to guess it later.
+    // Day and month stay zero-padded and in that order, and the separator
+    // is the same non-breaking hyphen these names have always used - it is
+    // what lets them go into SQL unquoted.
+    dbtable=crypt+"_"+QString::number(cd.day()).rightJustified(2,'0')+"‑"
+           +QString::number(cd.month()).rightJustified(2,'0')+"‑"
+           +QString::number(cd.year())
+           +"_"+QString::number(ct.hour()).rightJustified(2,'0')+"‑"
+           +QString::number(ct.minute()).rightJustified(2,'0');
     // Created now, so it is labelled now - the table is still empty, and
     // tableLabel would find no row to read a time from.
     ui->tables->addItem(localStamp(QDateTime::currentDateTime()), dbtable);
