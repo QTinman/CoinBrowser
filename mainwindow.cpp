@@ -683,14 +683,32 @@ QStringList MainWindow::initializemodel()
             // Says which table the comparison columns are against and how many
             // coins it had, so an empty previous table is visible rather than
             // showing up as a screen full of zeroes.
-            QString when = prevStamp.isEmpty()
-                         ? QString("no earlier table to compare against")
-                         : QString("compared against %1 (%2 coins), written %3")
-                               .arg(prevtable).arg(prev.count())
-                               .arg(QDateTime::fromString(prevStamp, Qt::ISODateWithMs).isValid()
-                                    ? QDateTime::fromString(prevStamp, Qt::ISODateWithMs)
-                                          .toLocalTime().toString("d MMM HH:mm")
-                                    : prevStamp.left(16));
+            QString when;
+            if (prevStamp.isEmpty()) when = "no earlier table to compare against";
+            else {
+                QDateTime dt = QDateTime::fromString(prevStamp, Qt::ISODateWithMs);
+                if (!dt.isValid()) dt = QDateTime::fromString(prevStamp, Qt::ISODate);
+                QString stamp;
+                if (dt.isValid()) {
+                    // The machine's own date order, so 18/10 and 10/18 each
+                    // read correctly where they are read. The short format is
+                    // the one people recognise at a glance, but several
+                    // locales abbreviate the year in it - widened to four
+                    // digits, since a comparison a year old should not look
+                    // like one from this morning.
+                    QString fmt = QLocale::system().dateTimeFormat(QLocale::ShortFormat);
+                    if (!fmt.contains("yyyy")) fmt.replace("yy", "yyyy");
+                    stamp = QLocale::system().toString(dt.toLocalTime(), fmt);
+                } else stamp = prevStamp.left(16);
+                // The table name is last and in brackets. It is the one thing
+                // here nobody can read - USDT_18-10_10-18 is stake, day, month,
+                // hour, minute - and it is already shown in the dropdown. It
+                // stays because after an update the dropdown shows the new
+                // table while the comparison was against the previous one, so
+                // naming it is the only way to tell them apart.
+                when = QString("compared against %1 coins from %2  (%3)")
+                           .arg(prev.count()).arg(stamp).arg(prevtable);
+            }
             ui->messages->setText(when);
         }
         // Close the transaction opened before the loop. Everything the run
