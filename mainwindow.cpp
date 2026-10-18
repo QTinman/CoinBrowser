@@ -444,7 +444,7 @@ QStringList MainWindow::initializemodel()
         if (stake.contains("USD")) stake="USD";
         QString path = loadsettings("json_path").toString();
         if (path =="") path="./crypto_"+stake+".json";
-        int rowsintable = loadsettings("rowsintable").toInt(), top_1h=0, bottom_1h=0;
+        int top_1h=0, bottom_1h=0;
         QString top_symbol="",bottom_symbol="";
         bool autoupdatejson=loadsettings("autoupdatejson").toBool();
         dbtable=ui->tables->currentText();
@@ -626,7 +626,7 @@ QStringList MainWindow::initializemodel()
                  }
                 for ( const auto& i : pairs  ) //Write to tableview
                 {
-                    if ((priceok && weekplus && dayplus && hourplus && volumeok && volummin && i==symbol && inrank && marked_cap_ok && unique<2 && priceplus && coin_from <= coincounts) || (!ui->filter->isChecked() && i==symbol && unique<2 && coin_from <= coincounts)) {
+                    if ((priceok && weekplus && dayplus && hourplus && volumeok && volummin && i==symbol && inrank && marked_cap_ok && unique<2 && priceplus && coin_from <= coincounts && coincounts <= coin_to) || (!ui->filter->isChecked() && i==symbol && unique<2 && coin_from <= coincounts && coincounts <= coin_to)) {
                         modeldatalist << QString::number(id) << symbol << name << QString::number(price, 'F', 3) << QString::number(price_change, 'F', 2) << QString::number(volume_24h, 'F', 2) << QString::number(percent_change_1h, 'F', 2) << QString::number(percent_change_24h, 'F', 2) << QString::number(percent_change_7d, 'F', 2) << rankmove << last_updated_time;
                         if (report) {
                             csv_string=name+","+QString::number(volume_24h)+","+QString::number(db_volume_24h)+","+QString::number(percent_change_1h)+","+QString::number(db_percent_change_1h)+","+last_updated+","+db_last_updated+","+cd.toString()+","+cdt.toString();
@@ -645,7 +645,18 @@ QStringList MainWindow::initializemodel()
                 unique = 0;
                 marked_cap_ok = false;
                 coincounts++;
-                if ((coin_to <= coincounts && !ui->actionUpdateJson->isChecked()) || (ui->actionUpdateJson->isChecked() && rowsintable <= coincounts)) break;
+                // A reload has nothing to write, so it stops once the
+                // displayed range is filled. A run that is building a table
+                // walks the whole list, so the table gets every coin the
+                // exchange lists - 703 on Binance USDT, where the old cap of
+                // 500 silently dropped the rest and they could never be
+                // compared against next time.
+                //
+                // create_db, not actionUpdateJson: a timer update sets
+                // create_db without ever checking that action, so it took the
+                // first branch and wrote only coin_to coins - 200 here, worse
+                // than the 500 the setting promised.
+                if (!create_db && coin_to <= coincounts) break;
 
 
         }

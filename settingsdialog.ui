@@ -224,20 +224,6 @@
    <item row="9" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout_10">
      <item>
-      <widget class="QLabel" name="label_9">
-       <property name="text">
-        <string>Nr. of pairs updated in table update</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QSpinBox" name="rowsintable">
-       <property name="maximum">
-        <number>9999</number>
-       </property>
-      </widget>
-     </item>
-     <item>
       <widget class="QCheckBox" name="autoupdatejson">
        <property name="text">
         <string>Auto upd.</string>

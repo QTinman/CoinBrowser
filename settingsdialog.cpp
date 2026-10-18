@@ -77,12 +77,6 @@ settingsDialog::settingsDialog(QWidget *parent) :
         autojsonmin = 240;
     } else ui->autojsonmin->setValue(autojsonmin);
     timerinteval=autojsonmin;
-    int rowsintable = loadsettings("rowsintable").toInt();
-    ui->rowsintable->setValue(rowsintable);
-    if (rowsintable == 0) {
-        ui->rowsintable->setValue(500);
-        rowsintable = 500;
-    } else ui->rowsintable->setValue(rowsintable);
     //int updateinterval=loadsettings("updateinterval").toInt();
     //ui->updateinterval->setValue(updateinterval);
 }
@@ -180,7 +174,6 @@ void settingsDialog::on_buttonBox_accepted()
     savesettings("report",ui->reports->isChecked());
     savesettings("autoupdatejson",ui->autoupdatejson->isChecked());
     savesettings("autojsonmin",ui->autojsonmin->value());
-    savesettings("rowsintable",ui->rowsintable->value());
     savesettings("cryptoInvestFile",ui->cryptoInvestFile->text());
     savesettings("balance",ui->balance->value());
     if ((ui->autoupdatejson->isChecked() && !timeractive) || (timerinteval != ui->autojsonmin->value() && ui->autoupdatejson->isChecked())) {
