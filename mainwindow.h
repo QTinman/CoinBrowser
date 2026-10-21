@@ -95,6 +95,8 @@ private:
     // The exchange reply, held while CoinGecko is asked for the market caps
     // and ranks that an exchange ticker does not carry.
     QByteArray pendingTickers;
+    // Kraken only: its pair list, held while the ticker is fetched.
+    QByteArray pendingPairs;
     // CoinGecko returns at most 250 coins per request, and a busy exchange
     // lists far more than that, so the pages are collected before converting.
     QJsonArray geckoRows;

@@ -168,7 +168,10 @@ MainWindow::MainWindow(QWidget *parent)
     volume_percent_max = loadsettings("volume_percent_max").toDouble();
     volum_min  = loadsettings("volum_min").toDouble();
     volume_min_check  = loadsettings("volum_min_check").toBool();
-    QStringList exchanges={"Binance","Bittrex","Kraken","FTX","Kucoin","GateIO"};
+    // FTX collapsed in November 2022 and Bittrex wound down after it; both
+    // are gone, so neither can be selected any more. Every name left here
+    // has a price source in fetchFromExchange.
+    QStringList exchanges={"Binance","Kraken","Kucoin","GateIO"};
     QString pwd = QDir::currentPath();
     QString json_path = loadsettings("json_path").toString();
     if (json_path == "") savesettings("json_path",pwd);
@@ -937,12 +940,19 @@ void MainWindow::on_tables_activated(int index)
 // this exchange would actually fill at.
 void MainWindow::fetchFromExchange()
 {
-    QString ex = exchange.toLower();
+    const QString ex = exchange.toLower();
     QUrl url;
     if (ex == "binance")      url = QUrl("https://api.binance.com/api/v3/ticker/24hr");
     else if (ex == "kucoin")  url = QUrl("https://api.kucoin.com/api/v1/market/allTickers");
+    else if (ex == "gateio")  url = QUrl("https://api.gateio.ws/api/v4/spot/tickers");
+    else if (ex == "kraken") {
+        // Kraken's ticker is keyed by its own pair codes - XXBTZUSD, ADAUSDT -
+        // so the pair list has to come first to learn which code is which coin.
+        pendingPairs.clear();
+        url = QUrl("https://api.kraken.com/0/public/AssetPairs");
+    }
     else {
-        ui->messages->setText("No exchange source for "+exchange+" yet - Binance and KuCoin are supported.");
+        ui->messages->setText("No exchange source for "+exchange+" yet.");
         return;
     }
     ui->messages->setText("Fetching prices from "+exchange+"...");
@@ -995,7 +1005,8 @@ QByteArray MainWindow::exchangeToCmcJson(const QByteArray &tickers, const QJsonA
     QList<Row> rows;
     QJsonDocument doc = QJsonDocument::fromJson(tickers);
 
-    if (exchange.compare("binance", Qt::CaseInsensitive) == 0) {
+    const QString ex = exchange.toLower();
+    if (ex == "binance") {
         for (const QJsonValue &v : doc.array()) {
             QJsonObject o = v.toObject();
             QString s = o["symbol"].toString();
@@ -1009,7 +1020,7 @@ QByteArray MainWindow::exchangeToCmcJson(const QByteArray &tickers, const QJsonA
             r.ch24  = o["priceChangePercent"].toString().toDouble();
             if (r.vol > 0) rows.append(r);
         }
-    } else {                                   // KuCoin: BASE-QUOTE, rate as a fraction
+    } else if (ex == "kucoin") {               // BASE-QUOTE, rate as a fraction
         for (const QJsonValue &v : doc.object()["data"].toObject()["ticker"].toArray()) {
             QJsonObject o = v.toObject();
             QStringList parts = o["symbol"].toString().split('-');
@@ -1019,6 +1030,51 @@ QByteArray MainWindow::exchangeToCmcJson(const QByteArray &tickers, const QJsonA
             r.price = o["last"].toString().toDouble();
             r.vol   = o["volValue"].toString().toDouble();
             r.ch24  = o["changeRate"].toString().toDouble()*100;
+            if (r.vol > 0) rows.append(r);
+        }
+    } else if (ex == "gateio") {               // BASE_QUOTE, percent already
+        for (const QJsonValue &v : doc.array()) {
+            QJsonObject o = v.toObject();
+            QStringList parts = o["currency_pair"].toString().split('_');
+            if (parts.size() != 2 || parts[1] != crypt) continue;
+            Row r;
+            r.sym   = parts[0];
+            r.price = o["last"].toString().toDouble();
+            r.vol   = o["quote_volume"].toString().toDouble();
+            r.ch24  = o["change_percentage"].toString().toDouble();
+            if (r.vol > 0) rows.append(r);
+        }
+    } else if (ex == "kraken") {
+        // Two replies: the pair list says which code is which coin, the ticker
+        // carries the numbers. Kraken reports no 24h change and no turnover,
+        // so both are worked out - change from today's opening price, turnover
+        // as the 24h volume weighted average times the 24h volume.
+        QHash<QString,QString> base;           // kraken code -> coin symbol
+        const QJsonObject pairs = QJsonDocument::fromJson(pendingPairs)
+                                      .object()["result"].toObject();
+        for (auto it = pairs.begin(); it != pairs.end(); ++it) {
+            const QJsonObject p = it.value().toObject();
+            const QStringList ws = p["wsname"].toString().split('/');
+            if (ws.size() == 2 && ws[1] == crypt) base.insert(it.key(), ws[0]);
+        }
+        const QJsonObject tick = doc.object()["result"].toObject();
+        for (auto it = tick.begin(); it != tick.end(); ++it) {
+            if (!base.contains(it.key())) continue;
+            const QJsonObject o = it.value().toObject();
+            const double last = o["c"].toArray().at(0).toString().toDouble();
+            const double open = o["o"].toString().toDouble();
+            const double vol  = o["v"].toArray().at(1).toString().toDouble();
+            const double vwap = o["p"].toArray().at(1).toString().toDouble();
+            Row r;
+            r.sym   = base.value(it.key());
+            // Kraken writes bitcoin as XBT and dogecoin as XDG. CoinGecko and
+            // every other exchange here use BTC and DOGE, so without this the
+            // two biggest coins on the list would carry no market cap or rank.
+            if (r.sym == "XBT") r.sym = "BTC";
+            else if (r.sym == "XDG") r.sym = "DOGE";
+            r.price = last;
+            r.vol   = vwap * vol;
+            r.ch24  = (open > 0) ? (last-open)/open*100 : 0;
             if (r.vol > 0) rows.append(r);
         }
     }
@@ -1097,7 +1153,16 @@ void MainWindow::replyFinished (QNetworkReply *reply)
 
         // An exchange ticker is only half the answer: ask CoinGecko for the
         // market caps and ranks, then convert both together.
-        if (host.contains("binance") || host.contains("kucoin")) {
+        if (host.contains("kraken") && reply->url().path().contains("AssetPairs")) {
+            pendingPairs = body;            // now ask for the numbers
+            QNetworkRequest t(QUrl("https://api.kraken.com/0/public/Ticker"));
+            t.setRawHeader("Accept", "application/json");
+            manager->get(t);
+            reply->deleteLater();
+            return;
+        }
+        if (host.contains("binance") || host.contains("kucoin")
+            || host.contains("gateio") || host.contains("kraken")) {
             pendingTickers = body;
             geckoRows = QJsonArray();
             geckoPage = 1;

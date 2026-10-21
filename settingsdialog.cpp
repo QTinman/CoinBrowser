@@ -21,7 +21,9 @@ settingsDialog::settingsDialog(QWidget *parent) :
     ui->setupUi(this);
     int index=0;
     QStringList blacklist,cryptolist,profilelist;
-    QStringList exchanges={"Binance","Bittrex","Kraken","FTX","Kucoin"}, maincoins={"BTC","ETH","USDT"};
+    // The same four as the main window, which this list had drifted from -
+    // it was still missing GateIO.
+    QStringList exchanges={"Binance","Kraken","Kucoin","GateIO"}, maincoins={"BTC","ETH","USDT"};
     ui->exchanges->clear();
     ui->exchanges->addItems(exchanges);
 
